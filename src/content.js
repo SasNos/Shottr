@@ -3,13 +3,21 @@
   const SETTLE_MS = 250;
   const OVERLAY_GONE_MS = 120;
   const MIN_SELECTION = 5;
-  const saved = { x: 0, y: 0, hidden: new Map() };
+  const saved = { x: 0, y: 0, hidden: new Map(), cancelled: false };
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Esc on the page aborts a running full page capture; capture.js polls isCancelled().
+  const onCancelKey = (event) => {
+    if (event.key === 'Escape') saved.cancelled = true;
+  };
 
   function measure() {
     saved.x = window.scrollX;
     saved.y = window.scrollY;
+    saved.cancelled = false;
+    document.removeEventListener('keydown', onCancelKey, true);
+    document.addEventListener('keydown', onCancelKey, true);
     return {
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
@@ -37,7 +45,10 @@
     }
   }
 
+  const isCancelled = () => saved.cancelled;
+
   function restore() {
+    document.removeEventListener('keydown', onCancelKey, true);
     for (const [element, previous] of saved.hidden) {
       if (previous.value) element.style.setProperty('visibility', previous.value, previous.priority);
       else element.style.removeProperty('visibility');
@@ -109,5 +120,5 @@
     });
   }
 
-  globalThis.__shottr = { measure, scrollTo, hideFixed, restore, selectArea };
+  globalThis.__shottr = { measure, scrollTo, hideFixed, isCancelled, restore, selectArea };
 })();

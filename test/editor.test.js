@@ -32,7 +32,8 @@ let doc;
 let canvases;
 let downloads;
 let removed;
-let swatches;
+let closed;
+let asked;
 let shared;
 let clipboard;
 let behavior;
@@ -63,6 +64,7 @@ async function start({ search = '?job=abc', job = JOB, shareable = true } = {}) 
   await initEditor({
     document: doc,
     chrome: {
+      tabs: { getCurrent: async () => ({ id: 42 }), remove: async (id) => closed.push(id) },
       storage: {
         local: {
           get: async (key) => (job ? { [key]: job } : {}),
@@ -91,6 +93,10 @@ async function start({ search = '?job=abc', job = JOB, shareable = true } = {}) 
     navigator,
     FileClass: FakeFile,
     ClipboardItemClass: FakeClipboardItem,
+    confirmDiscard: (message) => {
+      asked.push(message);
+      return behavior.keep !== true;
+    },
   });
 }
 
@@ -102,12 +108,9 @@ beforeEach(() => {
   shared = [];
   clipboard = [];
   behavior = {};
-  swatches = ['#e5322d', '#1a73e8'].map((color) => {
-    const swatch = new FakeElement('button');
-    swatch.dataset.color = color;
-    return swatch;
-  });
-  doc.selectors['[data-color]'] = swatches;
+  closed = [];
+  asked = [];
+  el('color-picker').value = '#e5322d';
   el('format').value = 'png';
   el('stroke-width').value = '3';
   el('font-size').value = '16';
@@ -142,7 +145,6 @@ test('the share button is only shown when the browser can share files', async ()
   await start();
   assert.equal(el('share').hidden, false);
   doc = new FakeDocument();
-  doc.selectors['[data-color]'] = swatches;
   await start({ shareable: false });
   assert.equal(el('share').hidden, true);
 });
@@ -195,17 +197,13 @@ test('the stroke width slider sets the pen width in page pixels', async () => {
   assert.equal(overlay().ctx.props.lineWidth, 10);
 });
 
-test('swatches and the color picker set the drawing color', async () => {
+test('the color picker sets the drawing color', async () => {
   await start();
-  await swatches[1].emit('click');
-  assert.deepEqual(swatches.map((swatch) => swatch.attrs['aria-pressed']), ['false', 'true']);
-  assert.equal(el('color-picker').value, '#1a73e8');
   await drag();
-  assert.equal(overlay().ctx.props.strokeStyle, '#1a73e8');
+  assert.equal(overlay().ctx.props.strokeStyle, '#e5322d');
 
   el('color-picker').value = '#abcdef';
   await el('color-picker').emit('input');
-  assert.deepEqual(swatches.map((swatch) => swatch.attrs['aria-pressed']), ['false', 'false']);
   await drag();
   assert.equal(overlay().ctx.props.strokeStyle, '#abcdef');
 });
@@ -226,7 +224,8 @@ test('the tool buttons show which tool is active', async () => {
 test('dragging with the rectangle tool shows a preview and adds a hollow rectangle', async () => {
   await start();
   el('stroke-width').value = '2';
-  await swatches[1].emit('click');
+  el('color-picker').value = '#1a73e8';
+  await el('color-picker').emit('input');
   await el('tool-rect').emit('click');
   await overlay().emit('pointerdown', { clientX: 20, clientY: 30 });
   await overlay().emit('pointermove', { clientX: 60, clientY: 45 });
@@ -473,4 +472,52 @@ test('share reports errors and treats closing the share sheet as cancelling', as
   behavior.share = Object.assign(new Error('closed'), { name: 'AbortError' });
   await el('share').emit('click');
   assert.equal(el('status').textContent, 'Cancelled.');
+});
+
+test('Cancel closes the tab right away when nothing was drawn', async () => {
+  await start();
+  await el('cancel').emit('click');
+  assert.deepEqual(closed, [42]);
+  assert.deepEqual(asked, []);
+});
+
+test('Cancel asks before throwing away annotations', async () => {
+  await start();
+  await drag();
+  behavior.keep = true;
+  await el('cancel').emit('click');
+  assert.equal(asked.length, 1);
+  assert.deepEqual(closed, []);
+  behavior.keep = false;
+  await el('cancel').emit('click');
+  assert.deepEqual(closed, [42]);
+});
+
+test('Cancel keeps a comment that is being typed in the confirmation', async () => {
+  await start();
+  const area = await openComment();
+  area.value = 'unsaved';
+  await el('cancel').emit('click');
+  assert.equal(area.removed, true);
+  assert.equal(asked.length, 1);
+  assert.deepEqual(closed, [42]);
+});
+
+test('Esc closes the editor, other keys do not', async () => {
+  await start();
+  await doc.emit('keydown', { key: 'a' });
+  assert.deepEqual(closed, []);
+  await doc.emit('keydown', { key: 'Escape' });
+  assert.deepEqual(closed, [42]);
+});
+
+test('Esc inside the comment box only discards the comment', async () => {
+  await start();
+  const area = await openComment();
+  let stopped = false;
+  area.value = 'oops';
+  await area.emit('keydown', { key: 'Escape', stopPropagation: () => (stopped = true) });
+  assert.equal(stopped, true);
+  assert.equal(area.removed, true);
+  assert.deepEqual(closed, []);
 });

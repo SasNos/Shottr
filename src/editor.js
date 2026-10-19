@@ -28,6 +28,7 @@ export async function initEditor({
   navigator,
   FileClass,
   ClipboardItemClass,
+  confirmDiscard,
 }) {
   const $ = (id) => document.getElementById(id);
   const say = (text) => {
@@ -56,9 +57,8 @@ export async function initEditor({
   $('share').hidden = !canShareFiles(navigator, FileClass);
 
   const notes = new Annotations();
-  const swatches = document.querySelectorAll('[data-color]');
   let tool = 'pen';
-  let color = swatches[0].dataset.color;
+  let color = $('color-picker').value;
   let drag = null;
   let editing = null;
   const text = { bold: false, italic: false };
@@ -87,13 +87,9 @@ export async function initEditor({
     });
   }
 
-  const setColor = (value) => {
-    color = value;
-    $('color-picker').value = value;
-    for (const swatch of swatches) swatch.setAttribute('aria-pressed', String(swatch.dataset.color === value));
-  };
-  for (const swatch of swatches) swatch.addEventListener('click', () => setColor(swatch.dataset.color));
-  $('color-picker').addEventListener('input', () => setColor($('color-picker').value));
+  $('color-picker').addEventListener('input', () => {
+    color = $('color-picker').value;
+  });
 
   $('stroke-width').addEventListener('input', () => {
     $('stroke-width-value').textContent = `${$('stroke-width').value} px`;
@@ -175,6 +171,7 @@ export async function initEditor({
         event.preventDefault();
         close(true);
       } else if (event.key === 'Escape') {
+        event.stopPropagation();
         close(false);
       }
     });
@@ -260,6 +257,18 @@ export async function initEditor({
     const file = new FileClass([blob], name, { type: blob.type });
     await navigator.share({ files: [file], title: job.title });
     return 'Shared.';
+  });
+
+  // Cancel closes this tab; annotations are only discarded after the user confirms.
+  const cancel = async () => {
+    finishEditing();
+    if (notes.canUndo && !confirmDiscard('Discard this screenshot and your annotations?')) return;
+    const tab = await chrome.tabs.getCurrent();
+    await chrome.tabs.remove(tab.id);
+  };
+  $('cancel').addEventListener('click', cancel);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') cancel();
   });
 
   syncButtons();

@@ -22,6 +22,7 @@ async function openEditor(job) {
 
 async function handleCapture(mode) {
   try {
+    if (mode === 'full') await report('…', 'Shottr: capturing. Press Esc on the page to cancel.');
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const job = await capturer.capture(tab, mode);
     if (job) await openEditor(job);

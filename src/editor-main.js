@@ -12,4 +12,5 @@ initEditor({
   navigator,
   FileClass: File,
   ClipboardItemClass: globalThis.ClipboardItem,
+  confirmDiscard: (message) => confirm(message),
 });

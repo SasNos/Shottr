@@ -10,7 +10,7 @@ export function callContent(name, args) {
 
 /**
  * Creates the capture orchestrator. `capture(tab, mode)` returns a capture job (see stitch.js) or null when the
- * user cancelled the area selection. Chrome allows only about two captureVisibleTab calls per second, so grabs
+ * user cancelled (Esc during the area selection or during a full page capture). Chrome allows only about two captureVisibleTab calls per second, so grabs
  * are spaced by CAPTURE_INTERVAL_MS.
  */
 export function createCapturer({ chrome, sleep, now }) {
@@ -46,6 +46,7 @@ export function createCapturer({ chrome, sleep, now }) {
       const pageHeight = Math.min(metrics.pageHeight, MAX_PAGE_HEIGHT);
       const tiles = [];
       for (const position of planScrollPositions(pageHeight, metrics.viewportHeight)) {
+        if (await call(tab.id, 'isCancelled')) return null;
         const y = await call(tab.id, 'scrollTo', position);
         tiles.push({ dataUrl: await grab(tab.windowId), y });
         await call(tab.id, 'hideFixed');

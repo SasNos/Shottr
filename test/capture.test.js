@@ -8,10 +8,11 @@ afterEach(() => {
 
 const tab = { id: 7, windowId: 3, url: 'https://example.com/', title: 'Example' };
 
-function setup({ metrics, selection = { x: 1, y: 2, width: 3, height: 4 }, failOn } = {}) {
+function setup({ metrics, selection = { x: 1, y: 2, width: 3, height: 4 }, failOn, cancelAfter = Infinity } = {}) {
   const log = [];
   const clock = { t: 10000 };
   let scrollPositions = [];
+  let polls = 0;
   globalThis.__shottr = {
     measure: () => metrics ?? { viewportWidth: 1000, viewportHeight: 800, pageHeight: 800 },
     scrollTo: (y) => {
@@ -19,6 +20,7 @@ function setup({ metrics, selection = { x: 1, y: 2, width: 3, height: 4 }, failO
       return y;
     },
     hideFixed: () => log.push('hideFixed'),
+    isCancelled: () => polls++ >= cancelAfter,
     restore: () => log.push('restore'),
     selectArea: () => selection,
   };
@@ -99,6 +101,17 @@ test('full page capture scrolls through the page and hides fixed elements after 
   assert.equal(job.pageHeight, 2000);
   assert.equal(job.crop, null);
   assert.equal(log.filter((entry) => entry === 'hideFixed').length, 3);
+  assert.equal(log.at(-1), 'restore');
+});
+
+test('Esc during a full page capture stops it, returns nothing and restores the page', async () => {
+  const { capturer, log, scrollPositions } = setup({
+    metrics: { viewportWidth: 1000, viewportHeight: 800, pageHeight: 3000 },
+    cancelAfter: 1,
+  });
+  assert.equal(await capturer.capture(tab, 'full'), null);
+  assert.deepEqual(scrollPositions(), [0]);
+  assert.equal(log.filter((entry) => entry.startsWith('capture:')).length, 1);
   assert.equal(log.at(-1), 'restore');
 });
 

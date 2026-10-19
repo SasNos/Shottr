@@ -104,19 +104,6 @@ button[aria-pressed="true"] {
   filter: brightness(1.1);
 }
 
-.swatch {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--swatch);
-}
-
-.swatch:hover:not(:disabled),
-.swatch:focus-visible {
-  background: var(--swatch);
-}
-
 .field {
   align-items: center;
   gap: 8px;

@@ -14,13 +14,10 @@
         <button type="button" id="tool-ellipse" aria-pressed="false">Ellipse</button>
         <button type="button" id="tool-comment" aria-pressed="false">Comment</button>
       </div>
-      <div class="group" role="group" aria-label="Color">
-        <button type="button" class="swatch" data-color="#e5322d" aria-label="Red" aria-pressed="true" style="--swatch: #e5322d"></button>
-        <button type="button" class="swatch" data-color="#1a73e8" aria-label="Blue" aria-pressed="false" style="--swatch: #1a73e8"></button>
-        <button type="button" class="swatch" data-color="#188038" aria-label="Green" aria-pressed="false" style="--swatch: #188038"></button>
-        <button type="button" class="swatch" data-color="#000000" aria-label="Black" aria-pressed="false" style="--swatch: #000000"></button>
-        <input type="color" id="color-picker" value="#e5322d" aria-label="Custom color" />
-      </div>
+      <label class="group field">
+        Color
+        <input type="color" id="color-picker" value="#e5322d" />
+      </label>
       <label class="group field">
         Stroke
         <input type="range" id="stroke-width" min="1" max="5" step="1" value="3" />
@@ -58,6 +55,7 @@
         <button type="button" id="save" class="primary">Download</button>
         <button type="button" id="copy">Copy</button>
         <button type="button" id="share" hidden>Share</button>
+        <button type="button" id="cancel">Cancel</button>
       </div>
     </header>
     <main class="stage">

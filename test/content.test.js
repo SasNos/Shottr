@@ -42,6 +42,20 @@ test('measure reports the viewport and the page height', () => {
   assert.deepEqual(api.measure(), { viewportWidth: 1000, viewportHeight: 700, pageHeight: 1200 });
 });
 
+test('Esc on the page marks the capture as cancelled until the next capture', () => {
+  api.measure();
+  assert.equal(api.isCancelled(), false);
+  doc.listeners.keydown[0]({ key: 'a' });
+  assert.equal(api.isCancelled(), false);
+  doc.listeners.keydown[0]({ key: 'Escape' });
+  assert.equal(api.isCancelled(), true);
+  api.measure();
+  assert.equal(api.isCancelled(), false);
+  assert.equal(doc.listeners.keydown.length, 1);
+  api.restore();
+  assert.equal(doc.listeners.keydown.length, 0);
+});
+
 test('scrollTo scrolls and reports the position that was reached', async () => {
   window.scrollY = 55;
   assert.equal(await api.scrollTo(60), 55);

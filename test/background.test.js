@@ -14,6 +14,7 @@ function reset() {
     badge: [],
     title: [],
     pageHeight: 600,
+    cancelled: false,
   });
 }
 
@@ -22,6 +23,7 @@ before(async () => {
   globalThis.__shottr = {
     measure: () => ({ viewportWidth: 800, viewportHeight: 600, pageHeight: state.pageHeight }),
     scrollTo: (y) => y,
+    isCancelled: () => state.cancelled,
     hideFixed: () => {},
     restore: () => {},
     selectArea: () => state.selection,
@@ -81,6 +83,15 @@ test('a full page capture of several tiles waits between the screenshots', async
   assert.equal(state.stored[key].tiles.length, 2);
 });
 
+test('Esc during a full page capture opens no editor and resets the button', async () => {
+  state.cancelled = true;
+  await send({ type: 'capture', mode: 'full' });
+  assert.deepEqual(state.created, []);
+  assert.deepEqual(state.badge, ['…', '']);
+  assert.match(state.title[0], /Esc/);
+  assert.equal(state.title[1], 'Shottr');
+});
+
 test('a cancelled area selection opens no editor', async () => {
   state.selection = null;
   await send({ type: 'capture', mode: 'area' });
@@ -93,8 +104,8 @@ test('a failing capture is reported on the toolbar button', async () => {
   state.tabs = [];
   await send({ type: 'capture', mode: 'full' });
   assert.deepEqual(state.created, []);
-  assert.deepEqual(state.badge, ['!']);
-  assert.match(state.title[0], /^Shottr: /);
+  assert.deepEqual(state.badge, ['…', '!']);
+  assert.match(state.title[1], /^Shottr: /);
 });
 
 test('requests from other senders are ignored', async () => {

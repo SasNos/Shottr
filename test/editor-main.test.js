@@ -4,9 +4,11 @@ import { FakeDocument, FakeElement, settle } from './helpers/fakes.js';
 
 const doc = new FakeDocument();
 const saved = {};
+const closed = [];
+const questions = [];
 
 before(async () => {
-  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem']) saved[name] = globalThis[name];
+  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem', 'confirm']) saved[name] = globalThis[name];
   const job = {
     mode: 'viewport',
     url: 'https://example.com/',
@@ -16,13 +18,13 @@ before(async () => {
     crop: null,
     pageHeight: 0,
   };
-  const swatch = new FakeElement('button');
-  swatch.dataset.color = '#e5322d';
-  doc.selectors['[data-color]'] = [swatch];
+  doc.getElementById('color-picker').value = '#e5322d';
   doc.getElementById('format').value = 'png';
+  globalThis.confirm = (message) => questions.push(message) > 0;
   globalThis.document = doc;
   globalThis.location = { search: '?job=main' };
   globalThis.chrome = {
+    tabs: { getCurrent: async () => ({ id: 7 }), remove: async (id) => closed.push(id) },
     storage: { local: { get: async (key) => ({ [key]: job }), remove: async () => {} } },
   };
   globalThis.Image = class {
@@ -47,4 +49,13 @@ test('the editor page starts itself with the real browser APIs', async () => {
   assert.equal(doc.getElementById('status').textContent, '100 × 50 px');
   await doc.getElementById('save').emit('click');
   assert.equal(doc.getElementById('status').textContent, 'Saved as PNG.');
+});
+
+test('cancelling after drawing asks the browser for confirmation and closes the tab', async () => {
+  const overlay = doc.created[1];
+  await overlay.emit('pointerdown', { clientX: 5, clientY: 5 });
+  await overlay.emit('pointerup', { clientX: 5, clientY: 5 });
+  await doc.getElementById('cancel').emit('click');
+  assert.equal(questions.length, 1);
+  assert.deepEqual(closed, [7]);
 });

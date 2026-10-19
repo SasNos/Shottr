@@ -77,7 +77,7 @@ export class FakeElement {
   }
 
   async emit(type, event = {}) {
-    const full = { preventDefault() {}, pointerId: 1, ...event };
+    const full = { preventDefault() {}, stopPropagation() {}, pointerId: 1, ...event };
     for (const listener of this.listeners[type] ?? []) await listener(full);
     return full;
   }
