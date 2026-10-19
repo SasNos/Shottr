@@ -7,10 +7,11 @@ let listener;
 
 function reset() {
   Object.assign(state, {
-    tabs: [{ id: 1, windowId: 2, url: 'https://example.com/', title: 'Example' }],
+    tabs: [{ id: 1, windowId: 2, index: 4, url: 'https://example.com/', title: 'Example' }],
     selection: { x: 0, y: 0, width: 10, height: 10 },
     stored: {},
     created: [],
+    createOptions: [],
     badge: [],
     title: [],
     pageHeight: 600,
@@ -41,7 +42,10 @@ before(async () => {
     },
     tabs: {
       query: async () => state.tabs,
-      create: async (options) => state.created.push(options.url),
+      create: async (options) => {
+        state.created.push(options.url);
+        state.createOptions.push(options);
+      },
       captureVisibleTab: async () => 'data:image/png;base64,AAAA',
     },
     storage: { local: { set: async (items) => Object.assign(state.stored, items) } },
@@ -72,6 +76,8 @@ test('a capture request stores the job and opens the editor', async () => {
   assert.deepEqual(state.created, [`chrome-extension://self/src/editor.html?job=${key.slice(4)}`]);
   assert.deepEqual(state.badge, ['']);
   assert.deepEqual(state.title, ['Shottr']);
+  assert.equal(state.createOptions[0].index, 5, 'opens right next to the captured tab');
+  assert.equal(state.createOptions[0].openerTabId, 1, 'closing the editor returns to the captured tab');
 });
 
 test('a full page capture of several tiles waits between the screenshots', async () => {

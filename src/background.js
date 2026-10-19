@@ -14,10 +14,15 @@ const report = (badge, title) =>
     chrome.action.setTitle({ title }),
   ]);
 
-async function openEditor(job) {
+async function openEditor(job, tab) {
   const id = crypto.randomUUID();
   await chrome.storage.local.set({ [jobKey(id)]: job });
-  await chrome.tabs.create({ url: `${chrome.runtime.getURL('src/editor.html')}?job=${id}` });
+  // Next to the captured tab, with that tab as opener, so closing the editor returns to the page.
+  await chrome.tabs.create({
+    url: `${chrome.runtime.getURL('src/editor.html')}?job=${id}`,
+    index: tab.index + 1,
+    openerTabId: tab.id,
+  });
 }
 
 async function handleCapture(mode) {
@@ -25,7 +30,7 @@ async function handleCapture(mode) {
     if (mode === 'full') await report('…', 'Shottr: capturing. Press Esc on the page to cancel.');
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const job = await capturer.capture(tab, mode);
-    if (job) await openEditor(job);
+    if (job) await openEditor(job, tab);
     await report('', 'Shottr');
   } catch (error) {
     await report('!', `Shottr: ${error.message}`);

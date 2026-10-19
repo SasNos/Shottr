@@ -5,9 +5,9 @@ Chrome extension (Manifest V3, no build step, no dependencies).
 ## Features
 
 - **Full page**: scrolls the page and stitches the screenshots. Only the page content is captured, never the browser UI.
-- **Selected area**: drag a rectangle on the page (Esc cancels).
+- **Selected area**: drag a frame, then adjust it (eight handles to resize, drag inside to move) and confirm with Enter, the Capture button or a double click. Esc cancels.
 - **Visible part**: the current viewport.
-- **Editor** after every capture: pen, hollow rectangles and ellipses (in the pen color), comments, undo, redo, clear.
+- **Editor** after every capture, opened in a new tab right next to the page (closing it returns to the page), preview in the real size of the page: pen, hollow rectangles and ellipses (in the pen color), comments, undo, redo, clear.
   - Color picker and stroke width 1 to 5 px.
   - Comments: black text on a white box. The box is resizable (down to one character wide) and wraps text; bold, italic and font size (10 to 48 px) apply to the whole comment.
 - **Cancel**: Esc during the area selection or during a full page capture aborts it; Cancel (or Esc) in the editor closes the tab, with a confirmation when there are annotations.

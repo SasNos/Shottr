@@ -4,7 +4,7 @@ function cropImage(image, crop, ratio, createCanvas) {
   const area = cropToPixels(crop, ratio, image);
   const canvas = createCanvas(area.width, area.height);
   canvas.getContext('2d').drawImage(image, area.x, area.y, area.width, area.height, 0, 0, area.width, area.height);
-  return canvas;
+  return { canvas, ratio };
 }
 
 function stitchTiles(images, job, ratio, createCanvas) {
@@ -17,11 +17,11 @@ function stitchTiles(images, job, ratio, createCanvas) {
     const top = Math.round(job.tiles[index].y * ratio * fit.scale);
     ctx.drawImage(image, 0, top, fit.width, Math.ceil(image.height * fit.scale));
   });
-  return canvas;
+  return { canvas, ratio: ratio * fit.scale };
 }
 
 /**
- * Turns a capture job into one canvas. Tiles are screenshots of the viewport at scroll offset `y` (CSS px);
+ * Turns a capture job into `{ canvas, ratio }`; `ratio` is canvas pixels per CSS pixel of the captured page. Tiles are screenshots of the viewport at scroll offset `y` (CSS px);
  * `pageHeight` is 0 unless the job is a full page capture.
  */
 export async function composeImage(job, { loadImage, createCanvas }) {

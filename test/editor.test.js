@@ -134,8 +134,8 @@ test('shows the capture and frees its storage', async () => {
   assert.equal(doc.title, 'Shottr: Example');
   assert.equal(el('status').textContent, '200 × 100 px');
   assert.deepEqual(el('wrap').children, canvases);
-  assert.equal(el('wrap').style.maxWidth, '100px');
-  assert.equal(el('wrap').style.aspectRatio, '200 / 100');
+  assert.equal(el('wrap').style.width, '100px', 'shown at the size of the original page');
+  assert.equal(el('wrap').style.height, '50px');
   assert.equal(el('undo').disabled, true);
   assert.equal(el('redo').disabled, true);
   assert.equal(el('clear').disabled, true);
@@ -520,4 +520,15 @@ test('Esc inside the comment box only discards the comment', async () => {
   assert.equal(stopped, true);
   assert.equal(area.removed, true);
   assert.deepEqual(closed, []);
+});
+
+test('a cropped capture is shown at its real size and drawn with the real pixel ratio', async () => {
+  // A 50 x 25 CSS px area of a 100 px wide viewport, captured at 2x.
+  const job = { ...JOB, crop: { x: 0, y: 0, width: 50, height: 25 } };
+  await start({ job });
+  assert.equal(canvases[0].width, 100);
+  assert.equal(el('wrap').style.width, '50px');
+  assert.equal(el('wrap').style.height, '25px');
+  await drag();
+  assert.equal(overlay().ctx.props.lineWidth, 6, 'a 3 px pen is 6 image pixels at 2x');
 });

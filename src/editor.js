@@ -41,17 +41,17 @@ export async function initEditor({
     return;
   }
 
-  const base = await composeImage(job, { loadImage, createCanvas });
+  const { canvas: base, ratio } = await composeImage(job, { loadImage, createCanvas });
   const overlay = createCanvas(base.width, base.height);
   const ctx = overlay.getContext('2d');
-  const ratio = base.width / job.viewportWidth;
 
   document.title = `Shottr: ${job.title}`;
   base.className = 'layer';
   overlay.className = 'layer overlay';
   const wrap = $('wrap');
-  wrap.style.maxWidth = `${base.width / ratio}px`;
-  wrap.style.aspectRatio = `${base.width} / ${base.height}`;
+  // Shown at the size of the original page: one CSS pixel of the page is one CSS pixel here.
+  wrap.style.width = `${base.width / ratio}px`;
+  wrap.style.height = `${base.height / ratio}px`;
   wrap.append(base, overlay);
   say(`${base.width} × ${base.height} px`);
   $('share').hidden = !canShareFiles(navigator, FileClass);

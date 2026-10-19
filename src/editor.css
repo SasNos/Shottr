@@ -142,11 +142,12 @@ input[type="range"] {
 
 .stage {
   padding: 16px;
+  overflow: auto;
 }
 
 .wrap {
   position: relative;
-  width: 100%;
+  flex: none;
   margin: 0 auto;
   background: #ffffff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
