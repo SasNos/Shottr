@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Shottr",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Capture the full page, a selected area or the viewport, annotate it and save it as PNG, WebP or PDF.",
   "action": {
     "default_title": "Shottr",

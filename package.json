@@ -1,6 +1,6 @@
 {
   "name": "shottr-chrome",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Chrome extension: full page, area and viewport screenshots with annotations, saved as PNG, WebP or PDF.",
