@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shottr</title>
+    <link rel="stylesheet" href="editor.css" />
+  </head>
+  <body>
+    <header class="toolbar">
+      <div class="group" role="group" aria-label="Tools">
+        <button type="button" id="tool-pen" aria-pressed="true">Pen</button>
+        <button type="button" id="tool-comment" aria-pressed="false">Comment</button>
+      </div>
+      <div class="group" role="group" aria-label="Pen color">
+        <button type="button" class="swatch" data-color="#e5322d" aria-label="Red" aria-pressed="true" style="--swatch: #e5322d"></button>
+        <button type="button" class="swatch" data-color="#1a73e8" aria-label="Blue" aria-pressed="false" style="--swatch: #1a73e8"></button>
+        <button type="button" class="swatch" data-color="#188038" aria-label="Green" aria-pressed="false" style="--swatch: #188038"></button>
+        <button type="button" class="swatch" data-color="#000000" aria-label="Black" aria-pressed="false" style="--swatch: #000000"></button>
+      </div>
+      <div class="group" role="group" aria-label="History">
+        <button type="button" id="undo">Undo</button>
+        <button type="button" id="redo">Redo</button>
+        <button type="button" id="clear">Clear</button>
+      </div>
+      <div class="spacer"></div>
+      <label class="format">
+        Format
+        <select id="format">
+          <option value="png">PNG</option>
+          <option value="webp">WebP</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </label>
+      <button type="button" id="save" class="primary">Save</button>
+    </header>
+    <main class="stage">
+      <div id="wrap" class="wrap"></div>
+    </main>
+    <p id="status" role="status"></p>
+    <script type="module" src="editor-main.js"></script>
+  </body>
+</html>
