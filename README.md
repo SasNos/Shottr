@@ -1,6 +1,6 @@
 # Shottr
 
-Chrome extension (Manifest V3, no build step, no dependencies).
+Chrome extension (Manifest V3, no build step, no runtime dependencies; the dev dependencies are only the linters and the formatter).
 
 ## Features
 
@@ -15,14 +15,17 @@ Chrome extension (Manifest V3, no build step, no dependencies).
 
 ## Install (development)
 
-1. Open `chrome://extensions`, enable *Developer mode*.
-2. *Load unpacked* and select this folder.
+1. Open `chrome://extensions`, enable _Developer mode_.
+2. _Load unpacked_ and select this folder.
 
 ## Develop
 
 ```bash
+npm install       # once: ESLint, Stylelint and Prettier
 npm test          # run the tests
 npm run coverage  # tests with a 100% line, branch and function threshold
+npm run lint      # ESLint (JS), Stylelint (CSS), Prettier check
+npm run format    # Prettier and the auto-fixable lint rules
 npm run icons     # regenerate icons/ (only needed when the icon design changes)
 ```
 
