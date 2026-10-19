@@ -37,10 +37,15 @@ npm run icons     # regenerate icons/ (only needed when the icon design changes)
 - Chrome does not allow capturing `chrome://` pages and the Chrome Web Store; the toolbar button then shows a `!` with the reason as tooltip.
 - PDF pages are limited to 14400 pt; taller screenshots are scaled down to fit.
 
+## Design
+
+The look comes from Spark, which takes its design system from Mber Flow (`SasNos/MberFlow`): `src/theme.css` is a copy of the Mber Flow tokens (spacing on the 4 px grid, type scale, control heights, radii, colors for light and dark). The other stylesheets use only these variables; Stylelint rejects hex and named colors and px values for font sizes, spacing and radii outside `theme.css`. Rules: `docs/STYLEGUIDE.md` in Mber Flow.
+
 ## Layout
 
 - `src/capture.js`, `src/content.js`, `src/background.js`: capture pipeline (service worker, page script).
 - `src/stitch.js`, `src/layout.js`: tile stitching and cropping.
 - `src/editor*.js`, `src/annotations.js`: preview and annotation editor.
+- `src/theme.css`, `src/theme.js`: design tokens and the light or dark switch.
 - `src/export.js`, `src/pdf.js`: PNG, WebP and PDF output (the PDF writer is built in).
 - `test/`: unit tests with browser API doubles in `test/helpers/`.

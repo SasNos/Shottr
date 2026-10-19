@@ -1,0 +1,117 @@
+/* Design tokens copied from Mber Flow (SasNos/MberFlow, app/src/theme.css), the design source Spark shares.
+   Keep the names and values identical so fixes can be carried over; rules live in Mber Flow's docs/STYLEGUIDE.md.
+   Only the tokens Shottr uses are copied. Every other stylesheet uses these variables, never raw values. */
+:root {
+  /* spacing scale (4 px grid; 2 px only for hairlines) */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  /* type scale */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-base: 14px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 24px;
+  --fs-display: 28px;
+
+  /* control sizes: bars / buttons and inputs / large buttons */
+  --h-bar: 32px;
+  --h-btn: 36px;
+  --h-lg: 42px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-ctl: 8px;
+  --radius: 12px;
+  --radius-xl: 16px;
+
+  /* roles */
+  --gap-tight: var(--space-1);
+  --gap: var(--space-4);
+  --pad-panel: var(--space-4);
+  --gap-page: var(--space-5);
+
+  /* motion */
+  --t-hover: 0.12s;
+  --t-fade: 0.2s;
+
+  color-scheme: light;
+
+  /* text */
+  --ink: #3d434f;
+  --ink-2: #5b6170;
+  --muted: #858a94;
+  --on-ink: #ffffff;
+  --on-color: #ffffff;
+
+  /* surfaces */
+  --canvas: #efe9e3;
+  --panel: #fbf9f6;
+  --panel-2: #f4efea;
+  --surface: #ffffff;
+  --hover: #efe6df;
+  --line: #dcd5cf;
+  --line-2: #e9e3dd;
+  --white: #ffffff;
+
+  /* accents */
+  --accent: #d9743a;
+  --accent-strong: #b4551f;
+  --accent-soft: #f8e2d2;
+  --sel: #c8501f;
+
+  /* danger */
+  --danger: #5a2328;
+  --danger-text: #5a2328;
+  --danger-soft: #f1e1e2;
+
+  /* depth */
+  --shadow: 0 1px 2px rgba(61, 67, 79, 0.08), 0 8px 24px rgba(61, 67, 79, 0.12);
+  --shadow-sm: 0 1px 2px rgba(61, 67, 79, 0.12);
+  --shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.35);
+  --font: system-ui, 'Segoe UI', roboto, arial, sans-serif;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ink: #ede1d8;
+  --ink-2: #b9b2ab;
+  --muted: #8b8f97;
+  --on-ink: #23262d;
+  --canvas: #1f2228;
+  --panel: #2a2e36;
+  --panel-2: #25282f;
+  --surface: #30343d;
+  --hover: #353a44;
+  --line: #454a55;
+  --line-2: #363b44;
+  --accent: #f0a35e;
+  --accent-strong: #ffc891;
+  --accent-soft: #3a2f27;
+  --sel: #f0a35e;
+  --danger-text: #e6a1a7;
+  --danger-soft: #3e2326;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+
+/* keyboard focus is always visible */
+:focus-visible {
+  outline: 2px solid var(--sel);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

@@ -14,7 +14,10 @@ before(async () => {
   const doc = new FakeDocument();
   doc.selectors['[data-mode]'] = buttons;
   globalThis.document = doc;
-  globalThis.window = { close: () => (closed += 1) };
+  globalThis.window = {
+    close: () => (closed += 1),
+    matchMedia: () => ({ matches: true, addEventListener: () => {} }),
+  };
   globalThis.chrome = { runtime: { sendMessage: async (message) => sent.push(message) } };
   await import('../src/popup.js');
 });
@@ -23,6 +26,10 @@ after(() => {
   delete globalThis.document;
   delete globalThis.window;
   delete globalThis.chrome;
+});
+
+test('the popup follows the system appearance', () => {
+  assert.equal(globalThis.document.documentElement.dataset.theme, 'dark');
 });
 
 test('each button asks the background worker for its capture mode and closes the popup', async () => {

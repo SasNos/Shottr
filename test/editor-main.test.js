@@ -8,7 +8,7 @@ const closed = [];
 const questions = [];
 
 before(async () => {
-  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem', 'confirm'])
+  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem', 'confirm', 'window'])
     saved[name] = globalThis[name];
   const job = {
     mode: 'viewport',
@@ -23,6 +23,7 @@ before(async () => {
   doc.getElementById('format').value = 'png';
   globalThis.confirm = (message) => questions.push(message) > 0;
   globalThis.document = doc;
+  globalThis.window = { matchMedia: () => ({ matches: false, addEventListener: () => {} }) };
   globalThis.location = { search: '?job=main' };
   globalThis.chrome = {
     tabs: { getCurrent: async () => ({ id: 7 }), remove: async (id) => closed.push(id) },
@@ -47,6 +48,7 @@ after(() => {
 });
 
 test('the editor page starts itself with the real browser APIs', async () => {
+  assert.equal(doc.documentElement.dataset.theme, 'light');
   assert.equal(doc.getElementById('status').textContent, '100 × 50 px');
   await doc.getElementById('save').emit('click');
   assert.equal(doc.getElementById('status').textContent, 'Saved as PNG.');
