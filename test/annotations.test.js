@@ -45,7 +45,11 @@ test('drawAnnotations draws a stroke through all its points', () => {
   ];
   drawAnnotations(ctx, [{ type: 'stroke', color: '#00f', width: 2, points }]);
   const lines = ctx.calls.filter(([name]) => name === 'lineTo').map(([, x, y]) => [x, y]);
-  assert.deepEqual(lines, [[5, 5], [9, 1], [9, 1]]);
+  assert.deepEqual(lines, [
+    [5, 5],
+    [9, 1],
+    [9, 1],
+  ]);
 });
 
 test('drawAnnotations draws a single point stroke as a dot', () => {
@@ -53,12 +57,23 @@ test('drawAnnotations draws a single point stroke as a dot', () => {
   drawAnnotations(ctx, [{ type: 'stroke', color: '#00f', width: 2, points: [{ x: 7, y: 8 }] }]);
   assert.deepEqual(
     ctx.calls.filter(([name]) => name === 'moveTo' || name === 'lineTo'),
-    [['moveTo', 7, 8], ['lineTo', 7, 8]],
+    [
+      ['moveTo', 7, 8],
+      ['lineTo', 7, 8],
+    ],
   );
 });
 
 const commentOf = (extra = {}) => ({
-  type: 'comment', x: 10, y: 20, width: 100, text: 'Hi\nthere!', fontSize: 16, bold: false, italic: false, ...extra,
+  type: 'comment',
+  x: 10,
+  y: 20,
+  width: 100,
+  text: 'Hi\nthere!',
+  fontSize: 16,
+  bold: false,
+  italic: false,
+  ...extra,
 });
 const fontOf = (ctx) => ctx.props.font;
 
@@ -79,7 +94,10 @@ test('drawAnnotations draws a comment as black text on a white box of the given 
       ['fillStyle', '#000000'],
     ],
   );
-  assert.deepEqual(ctx.calls.find(([name]) => name === 'fillRect'), ['fillRect', 10, 20, 100, 2 * 16 * 1.3 + 16]);
+  assert.deepEqual(
+    ctx.calls.find(([name]) => name === 'fillRect'),
+    ['fillRect', 10, 20, 100, 2 * 16 * 1.3 + 16],
+  );
   const texts = ctx.calls.filter(([name]) => name === 'fillText');
   assert.deepEqual(texts[1], ['fillText', 'there!', 18, 20 + 8 + 16 * 1.3]);
 });
@@ -111,15 +129,27 @@ test('drawAnnotations draws a rectangle from any two corners with the pen color'
   drawAnnotations(ctx, [{ type: 'rect', color: '#123456', width: 3, x1: 50, y1: 40, x2: 10, y2: 30 }]);
   assert.equal(ctx.props.strokeStyle, '#123456');
   assert.equal(ctx.props.lineWidth, 3);
-  assert.deepEqual(ctx.calls.find(([name]) => name === 'strokeRect'), ['strokeRect', 10, 30, 40, 10]);
-  assert.equal(ctx.calls.some(([name]) => name === 'fillRect'), false);
+  assert.deepEqual(
+    ctx.calls.find(([name]) => name === 'strokeRect'),
+    ['strokeRect', 10, 30, 40, 10],
+  );
+  assert.equal(
+    ctx.calls.some(([name]) => name === 'fillRect'),
+    false,
+  );
 });
 
 test('drawAnnotations draws an ellipse inside the dragged box without filling it', () => {
   const ctx = fakeCtx();
   drawAnnotations(ctx, [{ type: 'ellipse', color: '#123456', width: 2, x1: 10, y1: 40, x2: 50, y2: 20 }]);
-  assert.deepEqual(ctx.calls.find(([name]) => name === 'ellipse'), ['ellipse', 30, 30, 20, 10, 0, 0, Math.PI * 2]);
-  assert.equal(ctx.calls.some(([name]) => name === 'fill'), false);
+  assert.deepEqual(
+    ctx.calls.find(([name]) => name === 'ellipse'),
+    ['ellipse', 30, 30, 20, 10, 0, 0, Math.PI * 2],
+  );
+  assert.equal(
+    ctx.calls.some(([name]) => name === 'fill'),
+    false,
+  );
   assert.equal(ctx.calls.at(-1)[0], 'stroke');
 });
 

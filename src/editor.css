@@ -32,7 +32,9 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--fg);
-  font: 14px/1.4 system-ui, sans-serif;
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
 }
 
 .toolbar {
@@ -87,7 +89,7 @@ button:disabled {
   cursor: default;
 }
 
-button[aria-pressed="true"] {
+button[aria-pressed='true'] {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
@@ -121,7 +123,7 @@ button[aria-pressed="true"] {
   font-style: italic;
 }
 
-input[type="color"] {
+input[type='color'] {
   width: 32px;
   height: 28px;
   padding: 2px;
@@ -131,7 +133,7 @@ input[type="color"] {
   cursor: pointer;
 }
 
-input[type="range"] {
+input[type='range'] {
   width: 90px;
   accent-color: var(--accent);
 }

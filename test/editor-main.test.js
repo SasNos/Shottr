@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { FakeDocument, FakeElement, settle } from './helpers/fakes.js';
+import { FakeDocument, settle } from './helpers/fakes.js';
 
 const doc = new FakeDocument();
 const saved = {};
@@ -8,7 +8,8 @@ const closed = [];
 const questions = [];
 
 before(async () => {
-  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem', 'confirm']) saved[name] = globalThis[name];
+  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem', 'confirm'])
+    saved[name] = globalThis[name];
   const job = {
     mode: 'viewport',
     url: 'https://example.com/',

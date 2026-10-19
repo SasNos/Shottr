@@ -119,7 +119,9 @@
         element.style.cssText = css;
         return element;
       };
-      const overlay = create('position:fixed;inset:0;z-index:2147483647;cursor:crosshair;background:transparent;margin:0;padding:0;');
+      const overlay = create(
+        'position:fixed;inset:0;z-index:2147483647;cursor:crosshair;background:transparent;margin:0;padding:0;',
+      );
       const box = create(
         'position:fixed;display:none;box-sizing:border-box;border:1px solid #fff;outline:1px solid #000;' +
           'box-shadow:0 0 0 100vmax rgba(0,0,0,0.45);cursor:move;',

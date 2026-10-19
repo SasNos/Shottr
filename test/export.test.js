@@ -56,7 +56,10 @@ test('flatten paints a white background, the base image and the annotations', ()
   const names = out.ctx.calls.filter(([name]) => name !== 'set').map(([name]) => name);
   assert.deepEqual(names.slice(0, 2), ['fillRect', 'drawImage']);
   assert.ok(names.includes('stroke'));
-  assert.deepEqual(out.ctx.calls.find(([name]) => name === 'fillRect'), ['fillRect', 0, 0, 30, 20]);
+  assert.deepEqual(
+    out.ctx.calls.find(([name]) => name === 'fillRect'),
+    ['fillRect', 0, 0, 30, 20],
+  );
 });
 
 test('buildFileName uses host name and time stamp', () => {

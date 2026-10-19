@@ -11,7 +11,7 @@ const tab = { id: 7, windowId: 3, url: 'https://example.com/', title: 'Example' 
 function setup({ metrics, selection = { x: 1, y: 2, width: 3, height: 4 }, failOn, cancelAfter = Infinity } = {}) {
   const log = [];
   const clock = { t: 10000 };
-  let scrollPositions = [];
+  const scrollPositions = [];
   let polls = 0;
   globalThis.__shottr = {
     measure: () => metrics ?? { viewportWidth: 1000, viewportHeight: 800, pageHeight: 800 },
@@ -69,12 +69,10 @@ test('capture of the viewport takes one screenshot without cropping', async () =
     crop: null,
     pageHeight: 0,
   });
-  assert.deepEqual(log.filter((entry) => !entry.startsWith('call:measure')), [
-    'inject:src/content.js',
-    'capture:3:png',
-    'call:restore',
-    'restore',
-  ]);
+  assert.deepEqual(
+    log.filter((entry) => !entry.startsWith('call:measure')),
+    ['inject:src/content.js', 'capture:3:png', 'call:restore', 'restore'],
+  );
 });
 
 test('capture of an area stores the selection as crop', async () => {
@@ -97,7 +95,10 @@ test('full page capture scrolls through the page and hides fixed elements after 
   });
   const job = await capturer.capture(tab, 'full');
   assert.deepEqual(scrollPositions(), [0, 800, 1200]);
-  assert.deepEqual(job.tiles.map((tile) => tile.y), [0, 800, 1200]);
+  assert.deepEqual(
+    job.tiles.map((tile) => tile.y),
+    [0, 800, 1200],
+  );
   assert.equal(job.pageHeight, 2000);
   assert.equal(job.crop, null);
   assert.equal(log.filter((entry) => entry === 'hideFixed').length, 3);
