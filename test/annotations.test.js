@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Annotations, drawAnnotations, drawSegment } from '../src/annotations.js';
+import { Annotations, drawAnnotations, drawSegment, wrapLines } from '../src/annotations.js';
 import { fakeCtx } from './helpers/fakes.js';
 
 test('Annotations supports undo, redo and clear', () => {
@@ -57,9 +57,14 @@ test('drawAnnotations draws a single point stroke as a dot', () => {
   );
 });
 
-test('drawAnnotations draws a comment as black text on a white box', () => {
+const commentOf = (extra = {}) => ({
+  type: 'comment', x: 10, y: 20, width: 100, text: 'Hi\nthere!', fontSize: 16, bold: false, italic: false, ...extra,
+});
+const fontOf = (ctx) => ctx.props.font;
+
+test('drawAnnotations draws a comment as black text on a white box of the given width', () => {
   const ctx = fakeCtx();
-  drawAnnotations(ctx, [{ type: 'comment', x: 10, y: 20, text: 'Hi\nthere!', fontSize: 16 }]);
+  drawAnnotations(ctx, [commentOf()]);
   const names = ctx.calls.filter(([name]) => name !== 'set' && name !== 'measureText').map(([name]) => name);
   assert.deepEqual(names, ['fillRect', 'strokeRect', 'fillText', 'fillText']);
   const sets = ctx.calls.filter(([name]) => name === 'set');
@@ -74,8 +79,65 @@ test('drawAnnotations draws a comment as black text on a white box', () => {
       ['fillStyle', '#000000'],
     ],
   );
-  const box = ctx.calls.find(([name]) => name === 'fillRect');
-  assert.deepEqual(box, ['fillRect', 10, 20, 60 + 16, 2 * 16 * 1.3 + 16]);
+  assert.deepEqual(ctx.calls.find(([name]) => name === 'fillRect'), ['fillRect', 10, 20, 100, 2 * 16 * 1.3 + 16]);
   const texts = ctx.calls.filter(([name]) => name === 'fillText');
   assert.deepEqual(texts[1], ['fillText', 'there!', 18, 20 + 8 + 16 * 1.3]);
+});
+
+test('drawAnnotations wraps comment text at the box width', () => {
+  const ctx = fakeCtx();
+  drawAnnotations(ctx, [commentOf({ width: 50, text: 'aaa bbb' })]);
+  const texts = ctx.calls.filter(([name]) => name === 'fillText').map(([, text]) => text);
+  assert.deepEqual(texts, ['aaa', 'bbb']);
+});
+
+test('drawAnnotations applies bold and italic to comments', () => {
+  const plain = fakeCtx();
+  const both = fakeCtx();
+  const bold = fakeCtx();
+  const italic = fakeCtx();
+  drawAnnotations(plain, [commentOf()]);
+  drawAnnotations(both, [commentOf({ bold: true, italic: true })]);
+  drawAnnotations(bold, [commentOf({ bold: true })]);
+  drawAnnotations(italic, [commentOf({ italic: true })]);
+  assert.equal(fontOf(plain), '16px sans-serif');
+  assert.equal(fontOf(both), 'italic bold 16px sans-serif');
+  assert.equal(fontOf(bold), 'bold 16px sans-serif');
+  assert.equal(fontOf(italic), 'italic 16px sans-serif');
+});
+
+test('drawAnnotations draws a rectangle from any two corners with the pen color', () => {
+  const ctx = fakeCtx();
+  drawAnnotations(ctx, [{ type: 'rect', color: '#123456', width: 3, x1: 50, y1: 40, x2: 10, y2: 30 }]);
+  assert.equal(ctx.props.strokeStyle, '#123456');
+  assert.equal(ctx.props.lineWidth, 3);
+  assert.deepEqual(ctx.calls.find(([name]) => name === 'strokeRect'), ['strokeRect', 10, 30, 40, 10]);
+  assert.equal(ctx.calls.some(([name]) => name === 'fillRect'), false);
+});
+
+test('drawAnnotations draws an ellipse inside the dragged box without filling it', () => {
+  const ctx = fakeCtx();
+  drawAnnotations(ctx, [{ type: 'ellipse', color: '#123456', width: 2, x1: 10, y1: 40, x2: 50, y2: 20 }]);
+  assert.deepEqual(ctx.calls.find(([name]) => name === 'ellipse'), ['ellipse', 30, 30, 20, 10, 0, 0, Math.PI * 2]);
+  assert.equal(ctx.calls.some(([name]) => name === 'fill'), false);
+  assert.equal(ctx.calls.at(-1)[0], 'stroke');
+});
+
+const measure = (text) => text.length * 10;
+
+test('wrapLines breaks at spaces', () => {
+  assert.deepEqual(wrapLines('aaa bbb ccc', 70, measure), ['aaa bbb', 'ccc']);
+});
+
+test('wrapLines keeps newlines and blank lines', () => {
+  assert.deepEqual(wrapLines('a\n\nb', 100, measure), ['a', '', 'b']);
+});
+
+test('wrapLines breaks words that are wider than the box', () => {
+  assert.deepEqual(wrapLines('abcdefgh', 30, measure), ['abc', 'def', 'gh']);
+  assert.deepEqual(wrapLines('ab cdefgh', 40, measure), ['ab', 'cdef', 'gh']);
+});
+
+test('wrapLines never loses characters in a box narrower than one character', () => {
+  assert.deepEqual(wrapLines('ab', 5, measure), ['a', 'b']);
 });

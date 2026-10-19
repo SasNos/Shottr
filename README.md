@@ -7,8 +7,10 @@ Chrome extension (Manifest V3, no build step, no dependencies).
 - **Full page**: scrolls the page and stitches the screenshots. Only the page content is captured, never the browser UI.
 - **Selected area**: drag a rectangle on the page (Esc cancels).
 - **Visible part**: the current viewport.
-- **Editor** after every capture: pen (4 colors) and comments (black text on a white box), undo, redo, clear.
-- **Save** as PNG, WebP or PDF (single page, sized to the screenshot).
+- **Editor** after every capture: pen, hollow rectangles and ellipses (in the pen color), comments, undo, redo, clear.
+  - Colors: four swatches plus a color picker. Stroke width 1 to 5 px.
+  - Comments: black text on a white box. The box is resizable (down to one character wide) and wraps text; bold, italic and font size (10 to 48 px) apply to the whole comment.
+- **Output**: download as PNG, WebP or PDF (single page, sized to the screenshot), copy to the clipboard (PNG), or share through the system share sheet (shown only when the browser supports sharing files).
 
 ## Install (development)
 

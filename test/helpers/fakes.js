@@ -94,6 +94,11 @@ export class FakeElement {
     if (this.parent) this.parent.children = this.parent.children.filter((child) => child !== this);
   }
 
+  contains(node) {
+    for (let current = node; current; current = current.parent) if (current === this) return true;
+    return false;
+  }
+
   setAttribute(name, value) {
     this.attrs[name] = value;
   }

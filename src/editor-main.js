@@ -9,4 +9,7 @@ initEditor({
   createCanvas: (width, height) => createCanvas(document, width, height),
   urlApi: URL,
   now: () => new Date(),
+  navigator,
+  FileClass: File,
+  ClipboardItemClass: globalThis.ClipboardItem,
 });

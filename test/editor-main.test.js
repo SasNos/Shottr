@@ -6,7 +6,7 @@ const doc = new FakeDocument();
 const saved = {};
 
 before(async () => {
-  for (const name of ['document', 'chrome', 'location', 'Image']) saved[name] = globalThis[name];
+  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem']) saved[name] = globalThis[name];
   const job = {
     mode: 'viewport',
     url: 'https://example.com/',

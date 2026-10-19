@@ -1,4 +1,8 @@
-/** Annotation items live in image pixel space: strokes {type:'stroke'} and comments {type:'comment'}. */
+/**
+ * Annotation items live in image pixel space:
+ * strokes {type:'stroke', points, color, width}, hollow shapes {type:'rect'|'ellipse', x1, y1, x2, y2, color, width}
+ * and comments {type:'comment', x, y, width, text, fontSize, bold, italic}.
+ */
 export class Annotations {
   constructor() {
     this.items = [];
@@ -58,15 +62,66 @@ function drawStroke(ctx, stroke) {
   ctx.stroke();
 }
 
+function drawRect(ctx, shape) {
+  styleStroke(ctx, shape);
+  ctx.strokeRect(
+    Math.min(shape.x1, shape.x2),
+    Math.min(shape.y1, shape.y2),
+    Math.abs(shape.x2 - shape.x1),
+    Math.abs(shape.y2 - shape.y1),
+  );
+}
+
+function drawEllipse(ctx, shape) {
+  styleStroke(ctx, shape);
+  ctx.beginPath();
+  ctx.ellipse(
+    (shape.x1 + shape.x2) / 2,
+    (shape.y1 + shape.y2) / 2,
+    Math.abs(shape.x2 - shape.x1) / 2,
+    Math.abs(shape.y2 - shape.y1) / 2,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  ctx.stroke();
+}
+
+/** Breaks text into lines of at most `maxWidth`: at newlines, then at spaces, then inside words that are too wide. */
+export function wrapLines(text, maxWidth, measure) {
+  const lines = [];
+  for (const paragraph of text.split('\n')) {
+    let line = '';
+    for (const word of paragraph.split(' ')) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (measure(candidate) <= maxWidth) {
+        line = candidate;
+      } else {
+        if (line) lines.push(line);
+        line = '';
+        for (const char of word) {
+          if (line && measure(line + char) > maxWidth) {
+            lines.push(line);
+            line = char;
+          } else {
+            line += char;
+          }
+        }
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
 function drawComment(ctx, comment) {
-  const { x, y, text, fontSize } = comment;
-  const lines = text.split('\n');
+  const { x, y, text, fontSize, width } = comment;
   const padding = fontSize * 0.5;
   const lineHeight = fontSize * 1.3;
-  ctx.font = `${fontSize}px sans-serif`;
+  ctx.font = `${comment.italic ? 'italic ' : ''}${comment.bold ? 'bold ' : ''}${fontSize}px sans-serif`;
   ctx.textBaseline = 'top';
-  const textWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
-  const boxWidth = textWidth + padding * 2;
+  const lines = wrapLines(text, Math.max(1, width - padding * 2), (line) => ctx.measureText(line).width);
+  const boxWidth = width;
   const boxHeight = lines.length * lineHeight + padding * 2;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(x, y, boxWidth, boxHeight);
@@ -77,7 +132,7 @@ function drawComment(ctx, comment) {
   lines.forEach((line, index) => ctx.fillText(line, x + padding, y + padding + index * lineHeight));
 }
 
-const painters = { stroke: drawStroke, comment: drawComment };
+const painters = { stroke: drawStroke, rect: drawRect, ellipse: drawEllipse, comment: drawComment };
 
 export function drawAnnotations(ctx, items) {
   for (const item of items) painters[item.type](ctx, item);

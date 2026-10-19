@@ -52,6 +52,15 @@ export function buildFileName(pageUrl, format, date) {
   return `${host || 'page'}-${stamp}.${format}`;
 }
 
+/** True when the browser can share files through the system share sheet. */
+export function canShareFiles(navigator, FileClass) {
+  return (
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files: [new FileClass([], 'probe.png', { type: 'image/png' })] })
+  );
+}
+
 export function triggerDownload(document, urlApi, blob, name) {
   const link = document.createElement('a');
   link.href = urlApi.createObjectURL(blob);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildFileName, encode, flatten, triggerDownload } from '../src/export.js';
+import { buildFileName, canShareFiles, encode, flatten, triggerDownload } from '../src/export.js';
 import { FakeElement } from './helpers/fakes.js';
 
 const canvasWith = (toBlob) => {
@@ -81,4 +81,28 @@ test('triggerDownload clicks a download link and frees the object url', () => {
   assert.equal(link.download, 'file.png');
   assert.equal(link.clicks, 1);
   assert.deepEqual(revoked, ['blob:abc']);
+});
+
+test('canShareFiles needs share, canShare and acceptance of files', () => {
+  class FakeFile {
+    constructor(parts, name, options) {
+      this.name = name;
+      this.type = options.type;
+    }
+  }
+  const share = () => {};
+  assert.equal(canShareFiles({}, FakeFile), false);
+  assert.equal(canShareFiles({ share }, FakeFile), false);
+  assert.equal(canShareFiles({ canShare: () => true }, FakeFile), false);
+  assert.equal(canShareFiles({ share, canShare: () => false }, FakeFile), false);
+  let probe;
+  const accepting = {
+    share,
+    canShare: (data) => {
+      probe = data.files[0];
+      return true;
+    },
+  };
+  assert.equal(canShareFiles(accepting, FakeFile), true);
+  assert.equal(probe.type, 'image/png');
 });
