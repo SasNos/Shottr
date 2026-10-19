@@ -7,6 +7,16 @@
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
     "coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \"test/**/*.test.js\"",
+    "lint": "eslint . && stylelint \"src/**/*.css\" && prettier --check .",
+    "format": "prettier --write . && eslint --fix . && stylelint --fix \"src/**/*.css\"",
     "icons": "node tools/make-icons.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "stylelint": "17.16.0",
+    "stylelint-config-standard": "40.0.0"
   }
 }

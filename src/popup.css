@@ -21,7 +21,9 @@ body {
   width: 220px;
   background: var(--bg);
   color: var(--fg);
-  font: 14px/1.4 system-ui, sans-serif;
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
 }
 
 h1 {

@@ -293,7 +293,9 @@ test('a comment is typed into a resizable text box and committed with Enter', as
   await area.emit('keydown', { key: 'Enter' });
   assert.equal(area.removed, true);
   assert.deepEqual(lastCall(overlay(), 'fillRect').slice(0, 4), ['fillRect', 100, 50, 100]);
-  const lines = overlay().ctx.calls.filter(([name]) => name === 'fillText').map(([, line]) => line);
+  const lines = overlay()
+    .ctx.calls.filter(([name]) => name === 'fillText')
+    .map(([, line]) => line);
   assert.deepEqual(lines, ['Fix', 'this']);
   assert.equal(overlay().ctx.props.font, '32px sans-serif');
   assert.equal(el('undo').disabled, false);
