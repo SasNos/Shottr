@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 import { initEditor } from '../src/editor.js';
+import { createChromeEditorHost } from '../src/hosts/chrome-editor.js';
 import { FakeDocument, FakeElement } from './helpers/fakes.js';
 
 const NOW = new Date('2026-10-19T12:34:56.000Z');
@@ -63,16 +64,23 @@ async function start({ search = '?job=abc', job = JOB, shareable = true } = {}) 
     : { clipboard: { write: async () => {} } };
   await initEditor({
     document: doc,
-    chrome: {
-      tabs: { getCurrent: async () => ({ id: 42 }), remove: async (id) => closed.push(id) },
-      storage: {
-        local: {
-          get: async (key) => (job ? { [key]: job } : {}),
-          remove: async (key) => removed.push(key),
+    // The editor runs on the Chrome host here, so these tests cover both editor.js and hosts/chrome-editor.js.
+    host: createChromeEditorHost({
+      chrome: {
+        tabs: { getCurrent: async () => ({ id: 42 }), remove: async (id) => closed.push(id) },
+        storage: {
+          local: {
+            get: async (key) => (job ? { [key]: job } : {}),
+            remove: async (key) => removed.push(key),
+          },
         },
       },
-    },
-    location: { search },
+      location: { search },
+      confirm: (message) => {
+        asked.push(message);
+        return behavior.keep !== true;
+      },
+    }),
     loadImage: async () => ({ width: 200, height: 100 }),
     createCanvas: (width, height) => {
       const canvas = new FakeElement('canvas');
@@ -93,10 +101,6 @@ async function start({ search = '?job=abc', job = JOB, shareable = true } = {}) 
     navigator,
     FileClass: FakeFile,
     ClipboardItemClass: FakeClipboardItem,
-    confirmDiscard: (message) => {
-      asked.push(message);
-      return behavior.keep !== true;
-    },
   });
 }
 

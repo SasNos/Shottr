@@ -1,55 +1,35 @@
 import { planScrollPositions } from './layout.js';
 
-export const CAPTURE_INTERVAL_MS = 600;
 export const MAX_PAGE_HEIGHT = 30000;
-
-/** Runs inside the page: calls a function exposed by content.js. */
-export function callContent(name, args) {
-  return globalThis.__shottr[name](...args);
-}
 
 /**
  * Creates the capture orchestrator. `capture(tab, mode)` returns a capture job (see stitch.js) or null when the
- * user cancelled (Esc during the area selection or during a full page capture). Chrome allows only about two captureVisibleTab calls per second, so grabs
- * are spaced by CAPTURE_INTERVAL_MS.
+ * user cancelled (Esc during the area selection or during a full page capture).
+ *
+ * `page` is the host's access to the page, so the same pipeline runs in the Chrome extension
+ * (hosts/chrome-page.js) and in Spark:
+ * - `inject(tab)` loads content.js into the page,
+ * - `call(tab, name, ...args)` runs a function of content.js in the page and returns its result,
+ * - `grab(tab)` returns the visible part of the page as a PNG data URL.
  */
-export function createCapturer({ chrome, sleep, now }) {
-  let lastCapture = 0;
-
-  const call = async (tabId, name, ...args) => {
-    const [{ result }] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: callContent,
-      args: [name, args],
-    });
-    return result;
-  };
-
-  const grab = async (windowId) => {
-    const wait = lastCapture + CAPTURE_INTERVAL_MS - now();
-    if (wait > 0) await sleep(wait);
-    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
-    lastCapture = now();
-    return dataUrl;
-  };
-
+export function createCapturer({ page }) {
   const modes = {
-    viewport: async (tab) => ({ tiles: [{ dataUrl: await grab(tab.windowId), y: 0 }], crop: null, pageHeight: 0 }),
+    viewport: async (tab) => ({ tiles: [{ dataUrl: await page.grab(tab), y: 0 }], crop: null, pageHeight: 0 }),
 
     area: async (tab) => {
-      const crop = await call(tab.id, 'selectArea');
+      const crop = await page.call(tab, 'selectArea');
       if (!crop) return null;
-      return { tiles: [{ dataUrl: await grab(tab.windowId), y: 0 }], crop, pageHeight: 0 };
+      return { tiles: [{ dataUrl: await page.grab(tab), y: 0 }], crop, pageHeight: 0 };
     },
 
     full: async (tab, metrics) => {
       const pageHeight = Math.min(metrics.pageHeight, MAX_PAGE_HEIGHT);
       const tiles = [];
       for (const position of planScrollPositions(pageHeight, metrics.viewportHeight)) {
-        if (await call(tab.id, 'isCancelled')) return null;
-        const y = await call(tab.id, 'scrollTo', position);
-        tiles.push({ dataUrl: await grab(tab.windowId), y });
-        await call(tab.id, 'hideFixed');
+        if (await page.call(tab, 'isCancelled')) return null;
+        const y = await page.call(tab, 'scrollTo', position);
+        tiles.push({ dataUrl: await page.grab(tab), y });
+        await page.call(tab, 'hideFixed');
       }
       return { tiles, crop: null, pageHeight };
     },
@@ -57,14 +37,14 @@ export function createCapturer({ chrome, sleep, now }) {
 
   return {
     async capture(tab, mode) {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['src/content.js'] });
+      await page.inject(tab);
       try {
-        const metrics = await call(tab.id, 'measure');
+        const metrics = await page.call(tab, 'measure');
         const result = await modes[mode](tab, metrics);
         if (!result) return null;
         return { mode, url: tab.url, title: tab.title, viewportWidth: metrics.viewportWidth, ...result };
       } finally {
-        await call(tab.id, 'restore');
+        await page.call(tab, 'restore');
       }
     },
   };

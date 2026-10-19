@@ -1,26 +1,19 @@
 import { Annotations, drawAnnotations, drawSegment } from './annotations.js';
 import { buildFileName, canShareFiles, encode, flatten, triggerDownload } from './export.js';
-import { jobKey } from './job.js';
 import { composeImage } from './stitch.js';
-
-async function loadJob(chrome, search) {
-  const id = new URLSearchParams(search).get('job');
-  if (!id) return null;
-  const key = jobKey(id);
-  const stored = await chrome.storage.local.get(key);
-  await chrome.storage.local.remove(key);
-  return stored[key] ?? null;
-}
 
 /**
  * Wires up the editor page: preview, pen, shapes and comments, undo/redo, and saving, copying and sharing.
  * Sizes the user picks (stroke width, font size) are CSS pixels of the captured page; they are multiplied by
  * `ratio` (image pixels per CSS pixel) for drawing.
+ *
+ * `host` connects the editor to where it runs (hosts/chrome-editor.js in the extension, Spark's own host there):
+ * `loadJob()` returns the capture job or null, `confirmDiscard(message)` resolves to true when the user agrees to
+ * throw the annotations away, `close()` closes the editor.
  */
 export async function initEditor({
   document,
-  chrome,
-  location,
+  host,
   loadImage,
   createCanvas,
   urlApi,
@@ -28,14 +21,13 @@ export async function initEditor({
   navigator,
   FileClass,
   ClipboardItemClass,
-  confirmDiscard,
 }) {
   const $ = (id) => document.getElementById(id);
   const say = (text) => {
     $('status').textContent = text;
   };
 
-  const job = await loadJob(chrome, location.search);
+  const job = await host.loadJob();
   if (!job) {
     say('No capture found. Start a new capture from the Shottr toolbar button.');
     return;
@@ -259,12 +251,11 @@ export async function initEditor({
     return 'Shared.';
   });
 
-  // Cancel closes this tab; annotations are only discarded after the user confirms.
+  // Cancel closes the editor; annotations are only discarded after the user confirms.
   const cancel = async () => {
     finishEditing();
-    if (notes.canUndo && !confirmDiscard('Discard this screenshot and your annotations?')) return;
-    const tab = await chrome.tabs.getCurrent();
-    await chrome.tabs.remove(tab.id);
+    if (notes.canUndo && !(await host.confirmDiscard('Discard this screenshot and your annotations?'))) return;
+    await host.close();
   };
   $('cancel').addEventListener('click', cancel);
   document.addEventListener('keydown', (event) => {
