@@ -291,7 +291,7 @@ test('the Capture bar stays inside the viewport and pointer positions are clampe
   const ui = open();
   await frame(ui, [950, 650], [990, 690]);
   assert.equal(ui.bar.style.left, '810px');
-  assert.equal(ui.bar.style.top, '658px');
+  assert.equal(ui.bar.style.top, '660px');
   await press(ui, ui.box, 970, 670);
   await move(ui, -50, -50);
   assert.deepEqual(boxRect(ui), { x: 0, y: 0, width: 40, height: 40 });

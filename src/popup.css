@@ -1,51 +1,40 @@
-:root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1b1b1f;
-  --border: #c9c9d1;
-  --hover: #eef0f6;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1e1f24;
-    --fg: #f1f1f4;
-    --border: #44464f;
-    --hover: #2b2d35;
-  }
-}
-
+/* Uses only the tokens of theme.css (Mber Flow design, shared with Spark). */
 body {
+  width: 224px;
   margin: 0;
-  padding: 16px;
-  width: 220px;
-  background: var(--bg);
-  color: var(--fg);
-  font:
-    14px/1.4 system-ui,
-    sans-serif;
+  padding: var(--space-5);
+  background: var(--panel);
+  color: var(--ink);
+  font: var(--fs-base) / 1.45 var(--font);
 }
 
 h1 {
-  margin: 0 0 12px;
-  font-size: 16px;
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-lg);
+  font-weight: 700;
 }
 
 button {
   display: block;
   width: 100%;
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  height: var(--h-btn);
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--surface);
   color: inherit;
   font: inherit;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
+  transition: background var(--t-hover);
 }
 
-button:hover,
-button:focus-visible {
+button:last-of-type {
+  margin-bottom: 0;
+}
+
+button:hover {
   background: var(--hover);
 }
