@@ -155,6 +155,13 @@ input[type='range'] {
   touch-action: none;
 }
 
+/* The captured window while an area is selected on it ("Selected area with DevTools"); placed by editor.js. */
+.pick {
+  position: fixed;
+  z-index: 40;
+  box-shadow: var(--shadow);
+}
+
 /* A comment while it is typed. Its look is part of the screenshot (annotations.js draws the same black on white),
    so these are content colors and sizes relative to the chosen font size, not interface tokens. */
 /* stylelint-disable color-named */

@@ -3,6 +3,40 @@ import { buildFileName, canShareFiles, encode, flatten, triggerDownload } from '
 import { composeImage } from './stitch.js';
 
 /**
+ * Shows the captured window fitted into the view (never enlarged), lets the user select an area on it and returns
+ * that area in CSS px of the capture, clipped to the image, or null when cancelled or outside the image.
+ */
+async function pickArea(job, { document, loadImage, selectArea, view }) {
+  const { dataUrl } = job.tiles[0];
+  const image = await loadImage(dataUrl);
+  const width = job.viewportWidth;
+  const height = image.height / (image.width / width);
+  const scale = Math.min(1, view.innerWidth / width, view.innerHeight / height);
+  const left = (view.innerWidth - width * scale) / 2;
+  const top = (view.innerHeight - height * scale) / 2;
+  const picture = document.createElement('img');
+  picture.className = 'pick';
+  picture.alt = '';
+  picture.src = dataUrl;
+  Object.assign(picture.style, {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width * scale}px`,
+    height: `${height * scale}px`,
+  });
+  document.body.append(picture);
+  const rect = await selectArea();
+  picture.remove();
+  if (!rect) return null;
+  const x = Math.max(0, (rect.x - left) / scale);
+  const y = Math.max(0, (rect.y - top) / scale);
+  const right = Math.min(width, (rect.x + rect.width - left) / scale);
+  const bottom = Math.min(height, (rect.y + rect.height - top) / scale);
+  if (right <= x || bottom <= y) return null;
+  return { x, y, width: right - x, height: bottom - y };
+}
+
+/**
  * Wires up the editor page: preview, pen, shapes and comments, undo/redo, and saving, copying and sharing.
  * Sizes the user picks (stroke width, font size) are CSS pixels of the captured page; they are multiplied by
  * `ratio` (image pixels per CSS pixel) for drawing.
@@ -10,6 +44,9 @@ import { composeImage } from './stitch.js';
  * `host` connects the editor to where it runs (hosts/chrome-editor.js in the extension, Spark's own host there):
  * `loadJob()` returns the capture job or null, `confirmDiscard(message)` resolves to true when the user agrees to
  * throw the annotations away, `close()` closes the editor.
+ *
+ * A job with `select` (a whole window, "Selected area with DevTools") is shown first fitted into `view`
+ * (`innerWidth`, `innerHeight`), and `selectArea()` (content.js) picks the part that goes into the editor.
  */
 export async function initEditor({
   document,
@@ -21,16 +58,26 @@ export async function initEditor({
   navigator,
   FileClass,
   ClipboardItemClass,
+  selectArea,
+  view,
 }) {
   const $ = (id) => document.getElementById(id);
   const say = (text) => {
     $('status').textContent = text;
   };
 
-  const job = await host.loadJob();
+  let job = await host.loadJob();
   if (!job) {
     say('No capture found. Start a new capture from the Shottr toolbar button.');
     return;
+  }
+  if (job.select) {
+    const crop = await pickArea(job, { document, loadImage, selectArea, view });
+    if (!crop) {
+      await host.close();
+      return;
+    }
+    job = { ...job, crop, select: false };
   }
 
   const { canvas: base, ratio } = await composeImage(job, { loadImage, createCanvas });

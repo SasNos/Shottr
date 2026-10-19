@@ -8,7 +8,7 @@ const closed = [];
 const questions = [];
 
 before(async () => {
-  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem', 'confirm', 'window'])
+  for (const name of ['document', 'chrome', 'location', 'Image', 'ClipboardItem', 'confirm', 'window', '__shottr'])
     saved[name] = globalThis[name];
   const job = {
     mode: 'viewport',
@@ -23,6 +23,7 @@ before(async () => {
   doc.getElementById('format').value = 'png';
   globalThis.confirm = (message) => questions.push(message) > 0;
   globalThis.document = doc;
+  globalThis.__shottr = { selectArea: async () => null };
   globalThis.window = { matchMedia: () => ({ matches: false, addEventListener: () => {} }) };
   globalThis.location = { search: '?job=main' };
   globalThis.chrome = {

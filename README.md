@@ -6,6 +6,7 @@ Chrome extension (Manifest V3, no build step, no runtime dependencies; the dev d
 
 - **Full page**: scrolls the page and stitches the screenshots. Only the page content is captured, never the browser UI.
 - **Selected area**: drag a frame, then adjust it (eight handles to resize, drag inside to move) and confirm with Enter, the Capture button or a double click. Esc cancels.
+- **Selected area with DevTools**: for areas that include the DevTools or other parts of the window. Chrome asks which window to share, Shottr takes one picture of it, and the area is selected on that picture (same handles and keys as above). The page screenshot functions of Chrome never contain the DevTools, so this mode needs the desktop capture dialog every time.
 - **Visible part**: the current viewport.
 - **Editor** after every capture, opened in a new tab right next to the page (closing it returns to the page), preview in the real size of the page: pen, hollow rectangles and ellipses (in the pen color), comments, undo, redo, clear.
   - Color picker and stroke width 1 to 5 px.
@@ -48,7 +49,8 @@ The look comes from Spark, which takes its design system from Mber Flow (`SasNos
 ## Layout
 
 - `src/capture.js`, `src/content.js`: capture pipeline and page script, independent of Chrome.
-- `src/hosts/`: the Chrome side of the pipeline and the editor (`chrome.scripting`, `captureVisibleTab`, `chrome.storage`, tabs).
+- `src/hosts/`: the Chrome side of the pipeline and the editor (`chrome.scripting`, `captureVisibleTab`, `chrome.storage`, tabs, the desktop capture for the window).
+- `src/window-frame.js`, `src/offscreen.*`: one frame of the picked window, taken in an offscreen document.
 - `src/background.js`, `src/popup.*`, `src/editor-main.js`: the extension shell.
 - `src/stitch.js`, `src/layout.js`: tile stitching and cropping.
 - `src/editor*.js`, `src/annotations.js`: preview and annotation editor.

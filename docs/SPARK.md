@@ -37,6 +37,19 @@ the pipeline reads `tab.url` and `tab.title`.
 | `confirmDiscard(message)` | browser `confirm()`                             | Mber `askConfirm` (no browser dialogs in Spark) |
 | `close()`                 | closes the editor tab                           | closes the editor page or panel                 |
 
+## Selected area with DevTools
+
+Only the area selection can include the DevTools. In Chrome (`src/hosts/chrome-window.js`) the whole window is taken
+through the desktop capture dialog, and the editor lets the user select the area on that picture (`select: true` in
+the job, `pickArea` in `src/editor.js`). Spark needs one more host function for the same job:
+
+| Function                                                                                         | Spark, Windows                                                                                                                                       | Spark, macOS                                                                         |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `grabWindow()`: picture of the Spark window and its DevTools window, PNG plus device pixel ratio | Windows Graphics Capture (`IGraphicsCaptureItemInterop::CreateForWindow` on Spark's own windows, no picker; without the yellow border on Windows 11) | ScreenCaptureKit for Spark's own windows; needs the screen recording permission once |
+
+If Spark later shows its DevTools as a panel inside the chrome web view, `CapturePreviewAsync` / `takeSnapshot` of
+that view is enough and no screen capture permission is needed.
+
 ## Open points for the Spark side
 
 1. `selectArea` returns a promise. WebView2's `ExecuteScriptAsync` does not wait for promises, so Spark needs the
