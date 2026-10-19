@@ -1,5 +1,6 @@
 import { createCapturer } from './capture.js';
 import { createChromePage } from './hosts/chrome-page.js';
+import { createChromeWindowCapture } from './hosts/chrome-window.js';
 import { MODES, jobKey } from './job.js';
 
 const capturer = createCapturer({
@@ -9,6 +10,8 @@ const capturer = createCapturer({
     now: () => Date.now(),
   }),
 });
+
+const windowCapture = createChromeWindowCapture({ chrome });
 
 const report = (badge, title) =>
   Promise.all([
@@ -32,7 +35,7 @@ async function handleCapture(mode) {
   try {
     if (mode === 'full') await report('…', 'Shottr: capturing. Press Esc on the page to cancel.');
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const job = await capturer.capture(tab, mode);
+    const job = mode === 'window-area' ? await windowCapture.capture(tab) : await capturer.capture(tab, mode);
     if (job) await openEditor(job, tab);
     await report('', 'Shottr');
   } catch (error) {

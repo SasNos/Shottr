@@ -46,7 +46,12 @@ const names = (canvas) => canvas.ctx.calls.filter(([name]) => name !== 'set').ma
 const count = (canvas, name) => canvas.ctx.calls.filter(([call]) => call === name).length;
 const lastCall = (canvas, name) => canvas.ctx.calls.findLast(([call]) => call === name);
 
-async function start({ search = '?job=abc', job = JOB, shareable = true } = {}) {
+async function start({
+  search = '?job=abc',
+  job = JOB,
+  shareable = true,
+  view = { innerWidth: 1000, innerHeight: 800 },
+} = {}) {
   const navigator = shareable
     ? {
         share: async (data) => {
@@ -101,6 +106,12 @@ async function start({ search = '?job=abc', job = JOB, shareable = true } = {}) 
     navigator,
     FileClass: FakeFile,
     ClipboardItemClass: FakeClipboardItem,
+    selectArea: async () => {
+      behavior.picture = { ...lastCreated('img') };
+      behavior.picture.shown = lastCreated('img').parent === doc.body;
+      return behavior.selection ?? null;
+    },
+    view,
   });
 }
 
@@ -537,4 +548,53 @@ test('a cropped capture is shown at its real size and drawn with the real pixel 
   assert.equal(el('wrap').style.height, '25px');
   await drag();
   assert.equal(overlay().ctx.props.lineWidth, 6, 'a 3 px pen is 6 image pixels at 2x');
+});
+
+const WINDOW_JOB = { ...JOB, mode: 'window-area', select: true };
+
+test('a window capture is shown fitted into the view and the selected area becomes the capture', async () => {
+  behavior.selection = { x: 460, y: 380, width: 50, height: 20 };
+  await start({ job: WINDOW_JOB });
+  assert.equal(behavior.picture.shown, true);
+  assert.equal(behavior.picture.className, 'pick');
+  assert.equal(behavior.picture.src, 'data:x');
+  assert.deepEqual(
+    [
+      behavior.picture.style.left,
+      behavior.picture.style.top,
+      behavior.picture.style.width,
+      behavior.picture.style.height,
+    ],
+    ['450px', '375px', '100px', '50px'],
+  );
+  assert.equal(lastCreated('img').removed, true);
+  assert.equal(el('status').textContent, '100 × 40 px');
+});
+
+test('a window larger than the view is shown scaled down and the selection is scaled back', async () => {
+  behavior.selection = { x: 0, y: 387.5, width: 25, height: 12.5 };
+  await start({ job: WINDOW_JOB, view: { innerWidth: 50, innerHeight: 800 } });
+  assert.equal(behavior.picture.style.width, '50px');
+  assert.equal(el('status').textContent, '100 × 50 px');
+});
+
+test('a selection reaching beyond the window is clipped to it', async () => {
+  behavior.selection = { x: 400, y: 350, width: 100, height: 100 };
+  await start({ job: WINDOW_JOB });
+  assert.equal(el('status').textContent, '100 × 100 px');
+});
+
+test('cancelling the selection on a window capture closes the editor', async () => {
+  await start({ job: WINDOW_JOB });
+  assert.deepEqual(closed, [42]);
+  assert.equal(canvases.length, 0);
+});
+
+test('a selection outside the window closes the editor', async () => {
+  behavior.selection = { x: 0, y: 0, width: 10, height: 10 };
+  await start({ job: WINDOW_JOB });
+  assert.deepEqual(closed, [42]);
+  behavior.selection = { x: 450, y: 0, width: 10, height: 10 };
+  await start({ job: WINDOW_JOB });
+  assert.deepEqual(closed, [42, 42]);
 });

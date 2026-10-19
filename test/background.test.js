@@ -16,6 +16,7 @@ function reset() {
     title: [],
     pageHeight: 600,
     cancelled: false,
+    streamId: 'stream-1',
   });
 }
 
@@ -34,7 +35,10 @@ before(async () => {
       id: 'self',
       getURL: (path) => `chrome-extension://self/${path}`,
       onMessage: { addListener: (fn) => (listener = fn) },
+      sendMessage: async () => ({ dataUrl: 'data:image/png;base64,WIN', width: 1600, height: 1000, ratio: 1 }),
     },
+    desktopCapture: { chooseDesktopMedia: (sources, callback) => callback(state.streamId) },
+    offscreen: { hasDocument: async () => false, createDocument: async () => {}, closeDocument: async () => {} },
     action: {
       setBadgeText: async ({ text }) => state.badge.push(text),
       setBadgeBackgroundColor: async () => {},
@@ -103,6 +107,22 @@ test('a cancelled area selection opens no editor', async () => {
   await send({ type: 'capture', mode: 'area' });
   assert.deepEqual(state.created, []);
   assert.deepEqual(state.stored, {});
+  assert.deepEqual(state.badge, ['']);
+});
+
+test('an area with DevTools takes the picked window and lets the editor select the area', async () => {
+  await send({ type: 'capture', mode: 'window-area' });
+  const [job] = Object.values(state.stored);
+  assert.equal(job.mode, 'window-area');
+  assert.equal(job.select, true);
+  assert.deepEqual(job.tiles, [{ dataUrl: 'data:image/png;base64,WIN', y: 0 }]);
+  assert.equal(state.created.length, 1);
+});
+
+test('a cancelled window picker opens no editor', async () => {
+  state.streamId = '';
+  await send({ type: 'capture', mode: 'window-area' });
+  assert.deepEqual(state.created, []);
   assert.deepEqual(state.badge, ['']);
 });
 

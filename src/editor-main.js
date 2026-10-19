@@ -15,4 +15,7 @@ initEditor({
   navigator,
   FileClass: File,
   ClipboardItemClass: globalThis.ClipboardItem,
+  // content.js is loaded by editor.html as a classic script before this module runs.
+  selectArea: globalThis.__shottr.selectArea,
+  view: window,
 });
