@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { CAPTURE_INTERVAL_MS, MAX_PAGE_HEIGHT, callContent, createCapturer } from '../src/capture.js';
+import { MAX_PAGE_HEIGHT, createCapturer } from '../src/capture.js';
+import { CAPTURE_INTERVAL_MS, callContent, createChromePage } from '../src/hosts/chrome-page.js';
 
 afterEach(() => {
   delete globalThis.__shottr;
@@ -41,13 +42,16 @@ function setup({ metrics, selection = { x: 1, y: 2, width: 3, height: 4 }, failO
     },
   };
   const sleeps = [];
+  // The pipeline runs on the Chrome host here, so these tests cover both capture.js and hosts/chrome-page.js.
   const capturer = createCapturer({
-    chrome,
-    sleep: async (ms) => {
-      sleeps.push(ms);
-      clock.t += ms;
-    },
-    now: () => clock.t,
+    page: createChromePage({
+      chrome,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+        clock.t += ms;
+      },
+      now: () => clock.t,
+    }),
   });
   return { capturer, log, sleeps, clock, scrollPositions: () => scrollPositions };
 }
@@ -133,4 +137,20 @@ test('capture restores the page when a screenshot fails', async () => {
   const { capturer, log } = setup({ failOn: 'capture' });
   await assert.rejects(capturer.capture(tab, 'viewport'), /capture failed/);
   assert.equal(log.at(-1), 'restore');
+});
+
+test('the pipeline needs only inject, call and grab from its host', async () => {
+  const calls = [];
+  const page = {
+    inject: async (tab) => calls.push(`inject:${tab.id}`),
+    call: async (tab, name) => {
+      calls.push(name);
+      return name === 'measure' ? { viewportWidth: 640, viewportHeight: 480, pageHeight: 480 } : undefined;
+    },
+    grab: async () => 'data:image/png;base64,SPARK',
+  };
+  const job = await createCapturer({ page }).capture({ id: 'tab-1', url: 'https://a.b/', title: 'A' }, 'viewport');
+  assert.deepEqual(calls, ['inject:tab-1', 'measure', 'restore']);
+  assert.deepEqual(job.tiles, [{ dataUrl: 'data:image/png;base64,SPARK', y: 0 }]);
+  assert.equal(job.viewportWidth, 640);
 });

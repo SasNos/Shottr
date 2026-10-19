@@ -1,10 +1,13 @@
 import { createCapturer } from './capture.js';
+import { createChromePage } from './hosts/chrome-page.js';
 import { MODES, jobKey } from './job.js';
 
 const capturer = createCapturer({
-  chrome,
-  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-  now: () => Date.now(),
+  page: createChromePage({
+    chrome,
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    now: () => Date.now(),
+  }),
 });
 
 const report = (badge, title) =>
