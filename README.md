@@ -19,6 +19,16 @@ Chrome extension (Manifest V3, no build step, no runtime dependencies; the dev d
 1. Open `chrome://extensions`, enable _Developer mode_.
 2. _Load unpacked_ and select this folder.
 
+## Update
+
+Chrome loads the extension from this folder, so the folder has to be current before Chrome can pick up a new version. Register the folder once for automatic updates (PowerShell, in this folder):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\auto-update.ps1 -Install
+```
+
+A scheduled task then runs `git pull --ff-only` at logon and every 15 minutes; local changes are never touched, and `-Uninstall` removes the task. A new version then takes one click: open `chrome://extensions` (Developer mode) and click _Update_, or the reload icon of Shottr. Updates and failures are logged to `%LOCALAPPDATA%\Shottr\auto-update.log`.
+
 ## Develop
 
 ```bash
