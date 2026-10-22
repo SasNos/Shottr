@@ -17,6 +17,8 @@ function reset() {
     pageHeight: 600,
     cancelled: false,
     streamId: 'stream-1',
+    copied: [],
+    copyResult: { ok: true },
   });
 }
 
@@ -54,8 +56,29 @@ before(async () => {
     },
     storage: { local: { set: async (items) => Object.assign(state.stored, items) } },
     scripting: {
-      executeScript: async (options) => (options.func ? [{ result: await options.func(...options.args) }] : [{}]),
+      executeScript: async (options) => {
+        if (options.func?.name === 'copyInPage') {
+          state.copied.push(options.args[0]);
+          return [{ result: state.copyResult }];
+        }
+        return options.func ? [{ result: await options.func(...options.args) }] : [{}];
+      },
     },
+  };
+  globalThis.createImageBitmap = async () => ({ width: 1600, height: 1200 });
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+    }
+
+    getContext() {
+      return { drawImage: () => {} };
+    }
+
+    async convertToBlob() {
+      return new Blob([new Uint8Array([1, 2, 3])]);
+    }
   };
   await import('../src/background.js');
 });
@@ -63,12 +86,21 @@ before(async () => {
 after(() => {
   delete globalThis.chrome;
   delete globalThis.__shottr;
+  delete globalThis.createImageBitmap;
+  delete globalThis.OffscreenCanvas;
 });
 
 beforeEach(reset);
 
 const send = async (message, sender = { id: 'self' }) => {
   listener(message, sender);
+  await settle();
+};
+
+// Screenshots are spaced by CAPTURE_INTERVAL_MS, so a capture right after another one waits that long.
+const sendAfterInterval = async (message) => {
+  listener(message, { id: 'self' });
+  await new Promise((resolve) => setTimeout(resolve, 700));
   await settle();
 };
 
@@ -124,6 +156,33 @@ test('a cancelled window picker opens no editor', async () => {
   await send({ type: 'capture', mode: 'window-area' });
   assert.deepEqual(state.created, []);
   assert.deepEqual(state.badge, ['']);
+});
+
+test('Copy in the selection bar copies the area on the page and opens no editor', async () => {
+  state.selection = { x: 0, y: 0, width: 10, height: 10, copy: true };
+  await sendAfterInterval({ type: 'capture', mode: 'area' });
+  assert.deepEqual(state.copied, ['AQID']);
+  assert.deepEqual(state.created, []);
+  assert.deepEqual(state.stored, {});
+  assert.deepEqual(state.badge, ['']);
+});
+
+test('when the page refuses the copy, the editor opens with the reason', async () => {
+  state.selection = { x: 0, y: 0, width: 10, height: 10, copy: true };
+  state.copyResult = { error: 'Document is not focused.' };
+  await sendAfterInterval({ type: 'capture', mode: 'area' });
+  const [job] = Object.values(state.stored);
+  assert.equal(job.copy, false);
+  assert.equal(job.notice, 'Could not copy on the page (Document is not focused). Use Copy here.');
+  assert.equal(state.created.length, 1);
+});
+
+test('when the page does not answer the copy, the editor opens', async () => {
+  state.selection = { x: 0, y: 0, width: 10, height: 10, copy: true };
+  state.copyResult = undefined;
+  await sendAfterInterval({ type: 'capture', mode: 'area' });
+  const [job] = Object.values(state.stored);
+  assert.match(job.notice, /the page did not answer/);
 });
 
 test('a failing capture is reported on the toolbar button', async () => {

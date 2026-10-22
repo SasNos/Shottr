@@ -23,11 +23,12 @@ The look already follows Spark: `src/theme.css` holds the Mber Flow tokens with 
 **Page host** for `createCapturer({ page })` (`src/capture.js`). A `tab` is whatever Spark uses to name a tab view;
 the pipeline reads `tab.url` and `tab.title`.
 
-| Function                   | Chrome (`hosts/chrome-page.js`)                        | Spark, Windows (WebView2)                                         | Spark, macOS (WKWebView)                  |
-| -------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------- |
-| `inject(tab)`              | `chrome.scripting.executeScript` with `src/content.js` | `ExecuteScriptAsync` with the file's text                         | `evaluateJavaScript` with the file's text |
-| `call(tab, name, ...args)` | `executeScript` with `callContent`                     | DevTools `Runtime.evaluate` with `awaitPromise` (see open points) | `callAsyncJavaScript`                     |
-| `grab(tab)`                | `captureVisibleTab`, at most 2 per second              | `CapturePreviewAsync` (PNG)                                       | `takeSnapshot`                            |
+| Function                                        | Chrome (`hosts/chrome-page.js`)                        | Spark, Windows (WebView2)                                         | Spark, macOS (WKWebView)                  |
+| ----------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------- |
+| `inject(tab)`                                   | `chrome.scripting.executeScript` with `src/content.js` | `ExecuteScriptAsync` with the file's text                         | `evaluateJavaScript` with the file's text |
+| `call(tab, name, ...args)`                      | `executeScript` with `callContent`                     | DevTools `Runtime.evaluate` with `awaitPromise` (see open points) | `callAsyncJavaScript`                     |
+| `grab(tab)`                                     | `captureVisibleTab`, at most 2 per second              | `CapturePreviewAsync` (PNG)                                       | `takeSnapshot`                            |
+| `copy(tab, base64)` (Copy in the selection bar) | `copyInPage` in the tab: async clipboard, short note   | OS clipboard from Rust (`arboard`), toast in the chrome           | same                                      |
 
 **Editor host** for `initEditor({ host })` (`src/editor.js`).
 

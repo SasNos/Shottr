@@ -104,7 +104,7 @@
     w: 'left:0;top:50%;cursor:ew-resize;',
   };
   const DRAW_HINT = 'Drag to select an area. Esc cancels.';
-  const ADJUST_HINT = 'Drag the handles to resize, drag inside to move. Enter captures, Esc cancels.';
+  const ADJUST_HINT = 'Drag the handles to resize, drag inside to move. Enter captures, Ctrl+C copies, Esc cancels.';
   // The selection UI lives in the page, where theme.css is not loaded, so it carries the Mber Flow values itself:
   // panel #fbf9f6, ink #3d434f, line #dcd5cf, --h-bar 32 px, --radius-ctl 8 px, --fs-md 13 px, 4 px grid.
   // The frame and the handles stay black and white so they are visible on any page.
@@ -112,11 +112,12 @@
     'height:32px;padding:0 12px;border:1px solid #dcd5cf;border-radius:8px;background:#fbf9f6;color:#3d434f;' +
     'font:600 13px/1 system-ui,sans-serif;cursor:pointer;';
   const PRIMARY_BUTTON_CSS = `${BUTTON_CSS}border-color:#3d434f;background:#3d434f;color:#ffffff;`;
-  const BAR_WIDTH = 190;
+  const BAR_WIDTH = 240;
   const BAR_HEIGHT = 32;
 
   // Lets the user draw a frame, then adjust it (resize, move, redraw) before confirming with Enter or the Capture button.
-  // Resolves with {x, y, width, height} in viewport CSS pixels, or null when cancelled.
+  // Resolves with {x, y, width, height} in viewport CSS pixels, or null when cancelled. The Copy button (or Ctrl+C,
+  // Cmd+C) resolves with the same rectangle plus `copy: true`: the area goes to the clipboard instead of the editor.
   function selectArea() {
     return new Promise((resolve) => {
       const create = (css) => {
@@ -140,7 +141,8 @@
         box.append(handle);
       }
       const hint = create(
-        'position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:4px 12px;background:#fbf9f6;' +
+        'position:fixed;top:12px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);' +
+          'padding:4px 12px;background:#fbf9f6;' +
           'color:#3d434f;font:13px/1.45 system-ui,sans-serif;border:1px solid #dcd5cf;border-radius:8px;' +
           'box-shadow:0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12);pointer-events:none;',
       );
@@ -148,10 +150,13 @@
       const captureButton = document.createElement('button');
       captureButton.textContent = 'Capture';
       captureButton.style.cssText = PRIMARY_BUTTON_CSS;
+      const copyButton = document.createElement('button');
+      copyButton.textContent = 'Copy';
+      copyButton.style.cssText = BUTTON_CSS;
       const cancelButton = document.createElement('button');
       cancelButton.textContent = 'Cancel';
       cancelButton.style.cssText = BUTTON_CSS;
-      bar.append(captureButton, cancelButton);
+      bar.append(captureButton, copyButton, cancelButton);
       overlay.append(box, hint, bar);
       document.documentElement.append(overlay);
 
@@ -174,20 +179,23 @@
         await delay(OVERLAY_GONE_MS);
         resolve(result);
       };
-      const confirm = () => {
-        if (rect && rect.width >= MIN_SELECTION && rect.height >= MIN_SELECTION) finish(rect);
+      const confirm = (extra = {}) => {
+        if (rect && rect.width >= MIN_SELECTION && rect.height >= MIN_SELECTION) finish({ ...rect, ...extra });
       };
+      const copy = () => confirm({ copy: true });
       const onKey = (event) => {
         if (event.key === 'Escape') finish(null);
         else if (event.key === 'Enter') confirm();
+        else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') copy();
         else return;
         event.preventDefault();
         event.stopPropagation();
       };
       document.addEventListener('keydown', onKey, true);
-      captureButton.addEventListener('click', confirm);
+      captureButton.addEventListener('click', () => confirm());
+      copyButton.addEventListener('click', copy);
       cancelButton.addEventListener('click', () => finish(null));
-      box.addEventListener('dblclick', confirm);
+      box.addEventListener('dblclick', () => confirm());
       bar.addEventListener('pointerdown', (event) => event.stopPropagation());
 
       const point = (event) => ({

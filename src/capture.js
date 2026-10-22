@@ -17,9 +17,12 @@ export function createCapturer({ page }) {
     viewport: async (tab) => ({ tiles: [{ dataUrl: await page.grab(tab), y: 0 }], crop: null, pageHeight: 0 }),
 
     area: async (tab) => {
-      const crop = await page.call(tab, 'selectArea');
-      if (!crop) return null;
-      return { tiles: [{ dataUrl: await page.grab(tab), y: 0 }], crop, pageHeight: 0 };
+      const selection = await page.call(tab, 'selectArea');
+      if (!selection) return null;
+      // Copy in the selection bar: the job is marked, and the caller puts it on the clipboard instead of the editor.
+      const { copy, ...crop } = selection;
+      const job = { tiles: [{ dataUrl: await page.grab(tab), y: 0 }], crop, pageHeight: 0 };
+      return copy ? { ...job, copy: true } : job;
     },
 
     full: async (tab, metrics) => {

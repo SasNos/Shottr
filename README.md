@@ -5,7 +5,7 @@ Chrome extension (Manifest V3, no build step, no runtime dependencies; the dev d
 ## Features
 
 - **Full page**: scrolls the page and stitches the screenshots. Only the page content is captured, never the browser UI.
-- **Selected area**: drag a frame, then adjust it (eight handles to resize, drag inside to move) and confirm with Enter, the Capture button or a double click. Esc cancels.
+- **Selected area**: drag a frame, then adjust it (eight handles to resize, drag inside to move) and confirm with Enter, the Capture button or a double click. Copy (or Ctrl+C, Cmd+C) puts the area straight on the clipboard as PNG without opening the editor; if the page does not allow it, the editor opens with a note and its own Copy button. Esc cancels.
 - **Selected area with DevTools**: for areas that include the DevTools or other parts of the window. Chrome asks which window to share, Shottr takes one picture of it, and the area is selected on that picture (same handles and keys as above). The page screenshot functions of Chrome never contain the DevTools, so this mode needs the desktop capture dialog every time.
 - **Visible part**: the current viewport.
 - **Editor** after every capture, opened in a new tab right next to the page (closing it returns to the page), preview in the real size of the page: pen, hollow rectangles and ellipses (in the pen color), comments, undo, redo, clear.
@@ -55,5 +55,6 @@ The look comes from Spark, which takes its design system from Mber Flow (`SasNos
 - `src/stitch.js`, `src/layout.js`: tile stitching and cropping.
 - `src/editor*.js`, `src/annotations.js`: preview and annotation editor.
 - `src/theme.css`, `src/theme.js`: design tokens and the light or dark switch.
+- `src/clipboard.js`: the PNG for Copy in the selection bar.
 - `src/export.js`, `src/pdf.js`: PNG, WebP and PDF output (the PDF writer is built in).
 - `test/`: unit tests with browser API doubles in `test/helpers/`.

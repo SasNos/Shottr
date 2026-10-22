@@ -4,7 +4,8 @@ import { composeImage } from './stitch.js';
 
 /**
  * Shows the captured window fitted into the view (never enlarged), lets the user select an area on it and returns
- * that area in CSS px of the capture, clipped to the image, or null when cancelled or outside the image.
+ * that area in CSS px of the capture, clipped to the image, or null when cancelled or outside the image. Copy in the
+ * selection bar adds `copy: true`.
  */
 async function pickArea(job, { document, loadImage, selectArea, view }) {
   const { dataUrl } = job.tiles[0];
@@ -28,12 +29,13 @@ async function pickArea(job, { document, loadImage, selectArea, view }) {
   const rect = await selectArea();
   picture.remove();
   if (!rect) return null;
+  const copy = rect.copy ? { copy: true } : {};
   const x = Math.max(0, (rect.x - left) / scale);
   const y = Math.max(0, (rect.y - top) / scale);
   const right = Math.min(width, (rect.x + rect.width - left) / scale);
   const bottom = Math.min(height, (rect.y + rect.height - top) / scale);
   if (right <= x || bottom <= y) return null;
-  return { x, y, width: right - x, height: bottom - y };
+  return { x, y, width: right - x, height: bottom - y, ...copy };
 }
 
 /**
@@ -71,12 +73,15 @@ export async function initEditor({
     say('No capture found. Start a new capture from the Shottr toolbar button.');
     return;
   }
+  let copyNow = false;
   if (job.select) {
-    const crop = await pickArea(job, { document, loadImage, selectArea, view });
-    if (!crop) {
+    const picked = await pickArea(job, { document, loadImage, selectArea, view });
+    if (!picked) {
       await host.close();
       return;
     }
+    const { copy, ...crop } = picked;
+    copyNow = Boolean(copy);
     job = { ...job, crop, select: false };
   }
 
@@ -92,7 +97,7 @@ export async function initEditor({
   wrap.style.width = `${base.width / ratio}px`;
   wrap.style.height = `${base.height / ratio}px`;
   wrap.append(base, overlay);
-  say(`${base.width} × ${base.height} px`);
+  say(job.notice ?? `${base.width} × ${base.height} px`);
   $('share').hidden = !canShareFiles(navigator, FileClass);
 
   const notes = new Annotations();
@@ -285,11 +290,12 @@ export async function initEditor({
     return `Saved as ${format.toUpperCase()}.`;
   });
 
-  onClick('copy', 'Could not copy', async () => {
+  const copyToClipboard = async () => {
     const { blob } = await render('png');
     await navigator.clipboard.write([new ClipboardItemClass({ 'image/png': blob })]);
     return 'Copied to the clipboard.';
-  });
+  };
+  onClick('copy', 'Could not copy', copyToClipboard);
 
   onClick('share', 'Could not share', async (format) => {
     const { blob, name } = await render(format);
@@ -310,4 +316,14 @@ export async function initEditor({
   });
 
   syncButtons();
+
+  // Copy in the selection bar on a window capture: copy the area and close, like Copy on the page.
+  if (copyNow) {
+    try {
+      await copyToClipboard();
+      await host.close();
+    } catch (error) {
+      say(`Could not copy: ${error.message}`);
+    }
+  }
 }

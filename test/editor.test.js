@@ -590,6 +590,26 @@ test('cancelling the selection on a window capture closes the editor', async () 
   assert.equal(canvases.length, 0);
 });
 
+test('Copy on a window capture copies the selected area and closes the editor', async () => {
+  behavior.selection = { x: 460, y: 380, width: 50, height: 20, copy: true };
+  await start({ job: WINDOW_JOB });
+  assert.equal(clipboard.length, 1);
+  assert.deepEqual(closed, [42]);
+});
+
+test('a failing copy on a window capture keeps the editor open with the reason', async () => {
+  behavior.selection = { x: 460, y: 380, width: 50, height: 20, copy: true };
+  behavior.clipboard = new Error('not allowed');
+  await start({ job: WINDOW_JOB });
+  assert.deepEqual(closed, []);
+  assert.equal(el('status').textContent, 'Could not copy: not allowed');
+});
+
+test('a notice from the service worker is shown instead of the size', async () => {
+  await start({ job: { ...JOB, notice: 'Could not copy on the page (x). Use Copy here.' } });
+  assert.equal(el('status').textContent, 'Could not copy on the page (x). Use Copy here.');
+});
+
 test('a selection outside the window closes the editor', async () => {
   behavior.selection = { x: 0, y: 0, width: 10, height: 10 };
   await start({ job: WINDOW_JOB });

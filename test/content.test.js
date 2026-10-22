@@ -102,7 +102,8 @@ function open() {
     bar,
     handle: (name) => box.children.find((child) => child.dataset.handle === name),
     captureButton: bar.children[0],
-    cancelButton: bar.children[1],
+    copyButton: bar.children[1],
+    cancelButton: bar.children[2],
   };
 }
 
@@ -150,6 +151,33 @@ test('the Capture and Cancel buttons confirm and cancel', async () => {
 
   ui = open();
   await frame(ui);
+  await ui.cancelButton.emit('click');
+  assert.equal(await ui.pending, null);
+});
+
+test('Copy sits between Capture and Cancel and returns the area marked for the clipboard', async () => {
+  let ui = open();
+  await frame(ui);
+  assert.deepEqual(
+    ui.bar.children.map((button) => button.textContent),
+    ['Capture', 'Copy', 'Cancel'],
+  );
+  await ui.copyButton.emit('click');
+  assert.deepEqual(await ui.pending, { x: 100, y: 100, width: 200, height: 100, copy: true });
+
+  for (const modifier of [{ ctrlKey: true }, { metaKey: true }]) {
+    ui = open();
+    await frame(ui);
+    await doc.emit('keydown', { key: 'C', ...modifier });
+    assert.deepEqual(await ui.pending, { x: 100, y: 100, width: 200, height: 100, copy: true });
+  }
+});
+
+test('C without Ctrl or Cmd does not copy', async () => {
+  const ui = open();
+  await frame(ui);
+  await doc.emit('keydown', { key: 'c' });
+  assert.equal(ui.overlay.removed, false);
   await ui.cancelButton.emit('click');
   assert.equal(await ui.pending, null);
 });
@@ -290,7 +318,7 @@ test('pressing a button of the toolbar does not start a new frame', async () => 
 test('the Capture bar stays inside the viewport and pointer positions are clamped', async () => {
   const ui = open();
   await frame(ui, [950, 650], [990, 690]);
-  assert.equal(ui.bar.style.left, '810px');
+  assert.equal(ui.bar.style.left, '760px');
   assert.equal(ui.bar.style.top, '660px');
   await press(ui, ui.box, 970, 670);
   await move(ui, -50, -50);
