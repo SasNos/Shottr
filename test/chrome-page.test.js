@@ -57,6 +57,35 @@ test('copyInPage puts the PNG on the clipboard and shows a short note', async ()
   assert.equal(toast.removed, true);
 });
 
+test('copyInPage hands the PNG to the copy the selection started and waits for it', async () => {
+  reset();
+  let handed;
+  globalThis.__shottr = {
+    takeCopy: () => ({ resolve: (blob) => (handed = blob), written: Promise.resolve(null) }),
+  };
+  try {
+    assert.deepEqual(await copyInPage('AQID', 'Copied.', 1600), { ok: true });
+    assert.deepEqual(written, [], 'no second write without the user activation');
+    assert.equal(handed.type, 'image/png');
+    assert.equal(document.documentElement.children[0].textContent, 'Copied.');
+  } finally {
+    delete globalThis.__shottr;
+  }
+});
+
+test('copyInPage reports a refused copy of the selection', async () => {
+  reset();
+  globalThis.__shottr = {
+    takeCopy: () => ({ resolve: () => {}, written: Promise.resolve(new Error('Write permission denied.')) }),
+  };
+  try {
+    assert.deepEqual(await copyInPage('AQID', 'Copied.', 1600), { error: 'Write permission denied.' });
+    assert.equal(document.documentElement.children.length, 0);
+  } finally {
+    delete globalThis.__shottr;
+  }
+});
+
 test('copyInPage reports a refused clipboard instead of throwing', async () => {
   reset();
   behavior.deny = true;

@@ -4,11 +4,31 @@ import { FakeDocument, FakeElement } from './helpers/fakes.js';
 
 const saved = {};
 const scrolls = [];
+const clipboard = { writes: [], refuse: false };
 let doc;
 let api;
 
 before(async () => {
-  for (const name of ['window', 'document', 'getComputedStyle', 'setTimeout']) saved[name] = globalThis[name];
+  for (const name of ['window', 'document', 'getComputedStyle', 'setTimeout', 'navigator', 'ClipboardItem'])
+    saved[name] = Object.getOwnPropertyDescriptor(globalThis, name);
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: {
+      clipboard: {
+        write: async ([item]) => {
+          clipboard.writes.push(item);
+          const blob = await item.data['image/png'];
+          if (clipboard.refuse) throw new Error('Write permission denied.');
+          clipboard.blob = blob;
+        },
+      },
+    },
+  });
+  globalThis.ClipboardItem = class {
+    constructor(data) {
+      this.data = data;
+    }
+  };
   globalThis.setTimeout = (callback) => {
     callback();
     return 0;
@@ -19,12 +39,16 @@ before(async () => {
 });
 
 after(() => {
-  for (const [name, value] of Object.entries(saved)) globalThis[name] = value;
+  for (const [name, descriptor] of Object.entries(saved)) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else delete globalThis[name];
+  }
   delete globalThis.__shottr;
 });
 
 beforeEach(() => {
   scrolls.length = 0;
+  Object.assign(clipboard, { writes: [], refuse: false, blob: undefined });
   doc = new FakeDocument();
   doc.documentElement.scrollHeight = 1200;
   doc.body.scrollHeight = 900;
@@ -171,6 +195,40 @@ test('Copy sits between Capture and Cancel and returns the area marked for the c
     await doc.emit('keydown', { key: 'C', ...modifier });
     assert.deepEqual(await ui.pending, { x: 100, y: 100, width: 200, height: 100, copy: true });
   }
+});
+
+test('Copy starts the clipboard write at once, while the click or key press still counts', async () => {
+  const ui = open();
+  await frame(ui);
+  await doc.emit('keydown', { key: 'c', ctrlKey: true });
+  assert.equal(clipboard.writes.length, 1, 'written before the picture exists');
+  const pending = api.takeCopy();
+  assert.equal(api.takeCopy(), null, 'handed over only once');
+  pending.resolve('PNG');
+  assert.equal(await pending.written, null);
+  assert.equal(clipboard.blob, 'PNG');
+  await ui.pending;
+});
+
+test('a refused clipboard write is kept as the answer of the pending copy', async () => {
+  clipboard.refuse = true;
+  const ui = open();
+  await frame(ui);
+  await ui.copyButton.emit('click');
+  const pending = api.takeCopy();
+  pending.resolve('PNG');
+  assert.match((await pending.written).message, /Write permission denied/);
+  await ui.pending;
+});
+
+test('Ctrl+C without a frame neither copies nor closes the selection', async () => {
+  const ui = open();
+  await doc.emit('keydown', { key: 'c', ctrlKey: true });
+  assert.equal(clipboard.writes.length, 0);
+  assert.equal(api.takeCopy(), null);
+  assert.equal(ui.overlay.removed, false);
+  await ui.cancelButton.emit('click');
+  assert.equal(await ui.pending, null);
 });
 
 test('C without Ctrl or Cmd does not copy', async () => {
