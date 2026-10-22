@@ -37,10 +37,8 @@ before(async () => {
       id: 'self',
       getURL: (path) => `chrome-extension://self/${path}`,
       onMessage: { addListener: (fn) => (listener = fn) },
-      sendMessage: async () => ({ dataUrl: 'data:image/png;base64,WIN', width: 1600, height: 1000, ratio: 1 }),
     },
-    desktopCapture: { chooseDesktopMedia: (sources, callback) => callback(state.streamId) },
-    offscreen: { hasDocument: async () => false, createDocument: async () => {}, closeDocument: async () => {} },
+    desktopCapture: { chooseDesktopMedia: (sources, tab, callback) => callback(state.streamId) },
     action: {
       setBadgeText: async ({ text }) => state.badge.push(text),
       setBadgeBackgroundColor: async () => {},
@@ -53,6 +51,7 @@ before(async () => {
         state.createOptions.push(options);
       },
       captureVisibleTab: async () => 'data:image/png;base64,AAAA',
+      getZoom: async () => 1,
     },
     storage: { local: { set: async (items) => Object.assign(state.stored, items) } },
     scripting: {
@@ -61,6 +60,8 @@ before(async () => {
           state.copied.push(options.args[0]);
           return [{ result: state.copyResult }];
         }
+        if (options.func?.name === 'grabInPage')
+          return [{ result: { dataUrl: 'data:image/png;base64,WIN', width: 1600, height: 1000, ratio: 1 } }];
         return options.func ? [{ result: await options.func(...options.args) }] : [{}];
       },
     },
@@ -156,6 +157,14 @@ test('a cancelled window picker opens no editor', async () => {
   await send({ type: 'capture', mode: 'window-area' });
   assert.deepEqual(state.created, []);
   assert.deepEqual(state.badge, ['']);
+});
+
+test('a window picker that Chrome refuses is reported on the toolbar button', async () => {
+  state.streamId = undefined;
+  await send({ type: 'capture', mode: 'window-area' });
+  assert.deepEqual(state.created, []);
+  assert.deepEqual(state.badge, ['!']);
+  assert.match(state.title[0], /desktop capture dialog could not be opened/);
 });
 
 test('Copy in the selection bar copies the area on the page and opens no editor', async () => {
