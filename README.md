@@ -59,8 +59,7 @@ The look comes from Spark, which takes its design system from Mber Flow (`SasNos
 ## Layout
 
 - `src/capture.js`, `src/content.js`: capture pipeline and page script, independent of Chrome.
-- `src/hosts/`: the Chrome side of the pipeline and the editor (`chrome.scripting`, `captureVisibleTab`, `chrome.storage`, tabs, the desktop capture for the window).
-- `src/window-frame.js`, `src/offscreen.*`: one frame of the picked window, taken in an offscreen document.
+- `src/hosts/`: the Chrome side of the pipeline and the editor (`chrome.scripting`, `captureVisibleTab`, `chrome.storage`, tabs, the desktop capture for the window, whose frame is grabbed in the captured page).
 - `src/background.js`, `src/popup.*`, `src/editor-main.js`: the extension shell.
 - `src/stitch.js`, `src/layout.js`: tile stitching and cropping.
 - `src/editor*.js`, `src/annotations.js`: preview and annotation editor.
