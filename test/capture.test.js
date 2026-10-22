@@ -84,6 +84,14 @@ test('capture of an area stores the selection as crop', async () => {
   const job = await capturer.capture(tab, 'area');
   assert.deepEqual(job.crop, { x: 1, y: 2, width: 3, height: 4 });
   assert.equal(job.tiles.length, 1);
+  assert.equal('copy' in job, false);
+});
+
+test('Copy in the selection bar marks the job for the clipboard and keeps the crop clean', async () => {
+  const { capturer } = setup({ selection: { x: 1, y: 2, width: 3, height: 4, copy: true } });
+  const job = await capturer.capture(tab, 'area');
+  assert.deepEqual(job.crop, { x: 1, y: 2, width: 3, height: 4 });
+  assert.equal(job.copy, true);
 });
 
 test('capture of an area returns null when the selection is cancelled and still restores the page', async () => {
