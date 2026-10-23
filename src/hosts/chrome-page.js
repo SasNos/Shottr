@@ -14,14 +14,23 @@ export function callContent(name, args) {
 
 /**
  * Runs inside the page: puts the PNG (base64) on the clipboard and shows `message` for `toastMs`. Self-contained
- * (no outer names), since chrome.scripting passes only the function's source. The click on Copy is the user activation the clipboard needs.
- * Resolves with `{ ok: true }` or `{ error }`, because a rejection would not reach the service worker.
+ * (no outer names), since chrome.scripting passes only the function's source. The clipboard needs the user's click
+ * or key press, so the PNG goes to the write that Copy in the selection started (content.js `takeCopy`); without
+ * one it is written directly. Resolves with `{ ok: true }` or `{ error }`, because a rejection would not reach the
+ * service worker.
  */
 export async function copyInPage(base64, message, toastMs) {
   try {
     const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
     const blob = new Blob([bytes], { type: 'image/png' });
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    const pending = globalThis.__shottr?.takeCopy();
+    if (pending) {
+      pending.resolve(blob);
+      const refused = await pending.written;
+      if (refused) throw refused;
+    } else {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    }
   } catch (error) {
     return { error: error.message };
   }

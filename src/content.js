@@ -3,9 +3,28 @@
   const SETTLE_MS = 250;
   const OVERLAY_GONE_MS = 120;
   const MIN_SELECTION = 5;
-  const saved = { x: 0, y: 0, hidden: new Map(), cancelled: false };
+  const saved = { x: 0, y: 0, hidden: new Map(), cancelled: false, copy: null };
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // The clipboard accepts a write only during the user's click or key press, which is long over once the service
+  // worker has the picture. So Copy starts the write right away with a promised PNG, and the service worker hands the
+  // PNG over later through takeCopy(). `written` resolves with null or the error of the write.
+  function startCopy() {
+    let resolve;
+    const png = new Promise((done) => (resolve = done));
+    const written = navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]).then(
+      () => null,
+      (error) => error,
+    );
+    saved.copy = { resolve, written };
+  }
+
+  function takeCopy() {
+    const copy = saved.copy;
+    saved.copy = null;
+    return copy;
+  }
 
   // Esc on the page aborts a running full page capture; capture.js polls isCancelled().
   const onCancelKey = (event) => {
@@ -179,10 +198,15 @@
         await delay(OVERLAY_GONE_MS);
         resolve(result);
       };
-      const confirm = (extra = {}) => {
-        if (rect && rect.width >= MIN_SELECTION && rect.height >= MIN_SELECTION) finish({ ...rect, ...extra });
+      const valid = () => rect && rect.width >= MIN_SELECTION && rect.height >= MIN_SELECTION;
+      const confirm = () => {
+        if (valid()) finish({ ...rect });
       };
-      const copy = () => confirm({ copy: true });
+      const copy = () => {
+        if (!valid()) return;
+        startCopy();
+        finish({ ...rect, copy: true });
+      };
       const onKey = (event) => {
         if (event.key === 'Escape') finish(null);
         else if (event.key === 'Enter') confirm();
@@ -233,5 +257,5 @@
     });
   }
 
-  globalThis.__shottr = { measure, scrollTo, hideFixed, isCancelled, restore, selectArea };
+  globalThis.__shottr = { measure, scrollTo, hideFixed, isCancelled, restore, selectArea, takeCopy };
 })();
