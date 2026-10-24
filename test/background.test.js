@@ -176,22 +176,22 @@ test('Copy in the selection bar copies the area on the page and opens no editor'
   assert.deepEqual(state.badge, ['']);
 });
 
-test('when the page refuses the copy, the editor opens with the reason', async () => {
+test('when the page cannot copy (no clipboard on http pages), the editor opens to copy it there', async () => {
   state.selection = { x: 0, y: 0, width: 10, height: 10, copy: true };
-  state.copyResult = { error: 'Document is not focused.' };
+  state.copyResult = { error: "Cannot read properties of undefined (reading 'write')" };
   await sendAfterInterval({ type: 'capture', mode: 'area' });
   const [job] = Object.values(state.stored);
-  assert.equal(job.copy, false);
-  assert.equal(job.notice, 'Could not copy on the page (Document is not focused). Use Copy here.');
+  assert.equal(job.copy, true);
   assert.equal(state.created.length, 1);
 });
 
-test('when the page does not answer the copy, the editor opens', async () => {
+test('when the page does not answer the copy, the editor opens to copy it there', async () => {
   state.selection = { x: 0, y: 0, width: 10, height: 10, copy: true };
   state.copyResult = undefined;
   await sendAfterInterval({ type: 'capture', mode: 'area' });
   const [job] = Object.values(state.stored);
-  assert.match(job.notice, /the page did not answer/);
+  assert.equal(job.copy, true);
+  assert.equal(state.created.length, 1);
 });
 
 test('a failing capture is reported on the toolbar button', async () => {

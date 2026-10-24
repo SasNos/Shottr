@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
-import { initEditor } from '../src/editor.js';
+import { CLIPBOARD_SETTLE_MS, initEditor } from '../src/editor.js';
 import { createChromeEditorHost } from '../src/hosts/chrome-editor.js';
 import { FakeDocument, FakeElement } from './helpers/fakes.js';
 
@@ -103,6 +103,7 @@ async function start({
       revokeObjectURL: () => {},
     },
     now: () => NOW,
+    sleep: async (ms) => behavior.sleeps.push(ms),
     navigator,
     FileClass: FakeFile,
     ClipboardItemClass: FakeClipboardItem,
@@ -122,7 +123,7 @@ beforeEach(() => {
   removed = [];
   shared = [];
   clipboard = [];
-  behavior = {};
+  behavior = { sleeps: [] };
   closed = [];
   asked = [];
   el('color-picker').value = '#e5322d';
@@ -605,9 +606,20 @@ test('a failing copy on a window capture keeps the editor open with the reason',
   assert.equal(el('status').textContent, 'Could not copy: not allowed');
 });
 
-test('a notice from the service worker is shown instead of the size', async () => {
-  await start({ job: { ...JOB, notice: 'Could not copy on the page (x). Use Copy here.' } });
-  assert.equal(el('status').textContent, 'Could not copy on the page (x). Use Copy here.');
+test('an area the page could not copy is copied by the editor, which then closes', async () => {
+  await start({ job: { ...JOB, copy: true } });
+  assert.equal(clipboard.length, 1);
+  assert.equal(el('status').textContent, 'Copied to the clipboard.');
+  // Chrome on Windows can lose the image when the tab closes right after the write.
+  assert.deepEqual(behavior.sleeps, [CLIPBOARD_SETTLE_MS], 'waits before closing');
+  assert.deepEqual(closed, [42]);
+});
+
+test('when the editor cannot copy either, it stays open with the reason', async () => {
+  behavior.clipboard = new Error('not allowed');
+  await start({ job: { ...JOB, copy: true } });
+  assert.deepEqual(closed, []);
+  assert.equal(el('status').textContent, 'Could not copy: not allowed');
 });
 
 test('a selection outside the window closes the editor', async () => {

@@ -2,6 +2,9 @@ import { Annotations, drawAnnotations, drawSegment } from './annotations.js';
 import { buildFileName, canShareFiles, encode, flatten, triggerDownload } from './export.js';
 import { composeImage } from './stitch.js';
 
+/** How long the editor stays open after copying on its own before it closes (see the end of initEditor). */
+export const CLIPBOARD_SETTLE_MS = 1000;
+
 /**
  * Shows the captured window fitted into the view (never enlarged), lets the user select an area on it and returns
  * that area in CSS px of the capture, clipped to the image, or null when cancelled or outside the image. Copy in the
@@ -57,6 +60,7 @@ export async function initEditor({
   createCanvas,
   urlApi,
   now,
+  sleep,
   navigator,
   FileClass,
   ClipboardItemClass,
@@ -73,7 +77,8 @@ export async function initEditor({
     say('No capture found. Start a new capture from the Shottr toolbar button.');
     return;
   }
-  let copyNow = false;
+  // A job marked `copy` is an area the page could not put on the clipboard: the editor copies it and closes.
+  let copyNow = Boolean(job.copy);
   if (job.select) {
     const picked = await pickArea(job, { document, loadImage, selectArea, view });
     if (!picked) {
@@ -97,7 +102,7 @@ export async function initEditor({
   wrap.style.width = `${base.width / ratio}px`;
   wrap.style.height = `${base.height / ratio}px`;
   wrap.append(base, overlay);
-  say(job.notice ?? `${base.width} × ${base.height} px`);
+  say(`${base.width} × ${base.height} px`);
   $('share').hidden = !canShareFiles(navigator, FileClass);
 
   const notes = new Annotations();
@@ -317,10 +322,12 @@ export async function initEditor({
 
   syncButtons();
 
-  // Copy in the selection bar on a window capture: copy the area and close, like Copy on the page.
+  // Copy in the selection bar (on a window capture, or an area the page could not copy): copy and close.
   if (copyNow) {
     try {
-      await copyToClipboard();
+      say(await copyToClipboard());
+      // Chrome on Windows hands the image to the clipboard lazily; closing the tab at once can lose it.
+      await sleep(CLIPBOARD_SETTLE_MS);
       await host.close();
     } catch (error) {
       say(`Could not copy: ${error.message}`);
