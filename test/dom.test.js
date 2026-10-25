@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { createCanvas, loadImage } from '../src/dom.js';
+import { createCanvas, delay, loadImage } from '../src/dom.js';
 
 const original = globalThis.Image;
 afterEach(() => {
@@ -33,4 +33,10 @@ test('createCanvas creates a canvas of the given size', () => {
   assert.equal(createCanvas(document, 30, 40), canvas);
   assert.equal(canvas.width, 30);
   assert.equal(canvas.height, 40);
+});
+
+test('delay resolves after the given time', async () => {
+  const start = Date.now();
+  await delay(30);
+  assert.ok(Date.now() - start >= 25);
 });

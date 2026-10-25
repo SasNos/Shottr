@@ -221,6 +221,20 @@ test('a refused clipboard write is kept as the answer of the pending copy', asyn
   await ui.pending;
 });
 
+test('on a page without the clipboard API (http) Copy still closes the selection and leaves the copy to Shottr', async () => {
+  const clipboardApi = navigator.clipboard;
+  delete navigator.clipboard;
+  try {
+    const ui = open();
+    await frame(ui);
+    await doc.emit('keydown', { key: 'c', ctrlKey: true });
+    assert.deepEqual(await ui.pending, { x: 100, y: 100, width: 200, height: 100, copy: true });
+    assert.equal(api.takeCopy(), null);
+  } finally {
+    navigator.clipboard = clipboardApi;
+  }
+});
+
 test('Ctrl+C without a frame neither copies nor closes the selection', async () => {
   const ui = open();
   await doc.emit('keydown', { key: 'c', ctrlKey: true });

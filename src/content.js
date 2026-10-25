@@ -9,8 +9,10 @@
 
   // The clipboard accepts a write only during the user's click or key press, which is long over once the service
   // worker has the picture. So Copy starts the write right away with a promised PNG, and the service worker hands the
-  // PNG over later through takeCopy(). `written` resolves with null or the error of the write.
+  // PNG over later through takeCopy(). `written` resolves with null or the error of the write. Pages without the
+  // clipboard API (http) get no write; the service worker then copies in the editor instead.
   function startCopy() {
+    if (!navigator.clipboard) return;
     let resolve;
     const png = new Promise((done) => (resolve = done));
     const written = navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]).then(

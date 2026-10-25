@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Shottr",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Capture the full page, a selected area (optionally with the DevTools) or the viewport, annotate it and save it as PNG, WebP or PDF.",
   "action": {
     "default_title": "Shottr",
@@ -10,5 +10,5 @@
   },
   "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
   "background": { "service_worker": "src/background.js", "type": "module" },
-  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage", "desktopCapture"]
+  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage", "desktopCapture", "clipboardWrite"]
 }

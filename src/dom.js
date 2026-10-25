@@ -13,3 +13,7 @@ export function createCanvas(document, width, height) {
   canvas.height = height;
   return canvas;
 }
+
+export function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

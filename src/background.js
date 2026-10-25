@@ -31,17 +31,16 @@ async function openEditor(job, tab) {
   });
 }
 
-// Copy in the selection bar: the area goes straight to the clipboard of the page. If the page refuses (no focus,
-// a site policy), the editor opens instead, so the capture is not lost and its own Copy button can be used.
+// Copy in the selection bar: the area goes straight to the clipboard of the page. If the page cannot (no clipboard
+// API on http pages, no focus, a site policy), the editor opens with the job still marked `copy`, copies the area
+// there (clipboardWrite) and closes again.
 async function copyArea(job, tab) {
   const base64 = await jobToPngBase64(job, {
     loadImage: async (url) => createImageBitmap(await (await fetch(url)).blob()),
     createCanvas: (width, height) => new OffscreenCanvas(width, height),
   });
   const result = await page.copy(tab, base64);
-  if (result?.ok) return;
-  const reason = (result?.error ?? 'the page did not answer').replace(/\.$/, '');
-  await openEditor({ ...job, copy: false, notice: `Could not copy on the page (${reason}). Use Copy here.` }, tab);
+  if (!result?.ok) await openEditor(job, tab);
 }
 
 async function handleCapture(mode) {
