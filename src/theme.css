@@ -1,4 +1,5 @@
-/* Design tokens copied from Mber Flow (SasNos/MberFlow, app/src/theme.css), the design source Spark shares.
+/* Design tokens copied from Mber Flow (SasNos/MberFlow, app/src/theme.css, style guide 1.16.3), the design source
+   Spark shares.
    Keep the names and values identical so fixes can be carried over; rules live in Mber Flow's docs/STYLEGUIDE.md.
    Only the tokens Shottr uses are copied. Every other stylesheet uses these variables, never raw values. */
 :root {
@@ -48,7 +49,7 @@
   /* text */
   --ink: #3d434f;
   --ink-2: #5b6170;
-  --muted: #858a94;
+  --muted: #646870;
   --on-ink: #ffffff;
   --on-color: #ffffff;
 
@@ -70,6 +71,7 @@
 
   /* danger */
   --danger: #5a2328;
+  --danger-hover: #74303a;
   --danger-text: #5a2328;
   --danger-soft: #f1e1e2;
 
@@ -84,7 +86,7 @@
   color-scheme: dark;
   --ink: #ede1d8;
   --ink-2: #b9b2ab;
-  --muted: #8b8f97;
+  --muted: #a0a4ab;
   --on-ink: #23262d;
   --canvas: #1f2228;
   --panel: #2a2e36;
@@ -97,6 +99,8 @@
   --accent-strong: #ffc891;
   --accent-soft: #3a2f27;
   --sel: #f0a35e;
+  --danger: #a4464e;
+  --danger-hover: #b0525a;
   --danger-text: #e6a1a7;
   --danger-soft: #3e2326;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -104,14 +108,27 @@
   --shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 
-/* keyboard focus is always visible */
+/* Keyboard focus is always visible: one focus ring, 2 px in --sel. Inputs show it as an --accent border with a
+   3 px --accent-soft halo instead (style guide 1.16.3). */
 :focus-visible {
   outline: 2px solid var(--sel);
   outline-offset: 2px;
 }
 
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* "Reduce motion" turns off every transition and animation. */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -59,6 +59,10 @@ beforeEach(() => {
     innerWidth: 1000,
     innerHeight: 700,
     scrollTo: (x, y) => scrolls.push([x, y]),
+    dark: false,
+    matchMedia(query) {
+      return { matches: query === '(prefers-color-scheme: dark)' && this.dark };
+    },
   };
 });
 
@@ -243,6 +247,31 @@ test('Ctrl+C without a frame neither copies nor closes the selection', async () 
   assert.equal(ui.overlay.removed, false);
   await ui.cancelButton.emit('click');
   assert.equal(await ui.pending, null);
+});
+
+test('the selection UI carries the Mber Flow values for light and dark', async () => {
+  let ui = open();
+  assert.match(ui.hint.style.cssText, /background:#fbf9f6;color:#3d434f;/);
+  assert.match(ui.hint.style.cssText, /border:1px solid #dcd5cf;/);
+  assert.match(
+    ui.captureButton.style.cssText,
+    /border:1px solid #3d434f;border-radius:8px;background:#3d434f;color:#ffffff;/,
+  );
+  assert.match(ui.copyButton.style.cssText, /height:32px;.*background:#fbf9f6;color:#3d434f;/);
+  await ui.cancelButton.emit('click');
+  await ui.pending;
+
+  window.dark = true;
+  ui = open();
+  assert.match(ui.hint.style.cssText, /background:#2a2e36;color:#ede1d8;/);
+  assert.match(ui.hint.style.cssText, /border:1px solid #454a55;/);
+  assert.match(ui.hint.style.cssText, /rgba\(0,0,0,0\.35\)/, 'dark shadow');
+  assert.match(
+    ui.captureButton.style.cssText,
+    /border:1px solid #ede1d8;border-radius:8px;background:#ede1d8;color:#23262d;/,
+  );
+  await ui.cancelButton.emit('click');
+  await ui.pending;
 });
 
 test('C without Ctrl or Cmd does not copy', async () => {

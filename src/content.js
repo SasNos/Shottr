@@ -126,13 +126,29 @@
   };
   const DRAW_HINT = 'Drag to select an area. Esc cancels.';
   const ADJUST_HINT = 'Drag the handles to resize, drag inside to move. Enter captures, Ctrl+C copies, Esc cancels.';
-  // The selection UI lives in the page, where theme.css is not loaded, so it carries the Mber Flow values itself:
-  // panel #fbf9f6, ink #3d434f, line #dcd5cf, --h-bar 32 px, --radius-ctl 8 px, --fs-md 13 px, 4 px grid.
-  // The frame and the handles stay black and white so they are visible on any page.
-  const BUTTON_CSS =
-    'height:32px;padding:0 12px;border:1px solid #dcd5cf;border-radius:8px;background:#fbf9f6;color:#3d434f;' +
-    'font:600 13px/1 system-ui,sans-serif;cursor:pointer;';
-  const PRIMARY_BUTTON_CSS = `${BUTTON_CSS}border-color:#3d434f;background:#3d434f;color:#ffffff;`;
+  // The selection UI lives in the page, where theme.css is not loaded, so it carries the Mber Flow values itself
+  // (--panel, --ink, --on-ink, --line, --shadow for light and dark; --h-bar 32 px, --radius-ctl 8 px, --fs-md 13 px,
+  // 4 px grid). The frame and the handles stay black and white so they are visible on any page.
+  const THEMES = {
+    light: {
+      panel: '#fbf9f6',
+      ink: '#3d434f',
+      onInk: '#ffffff',
+      line: '#dcd5cf',
+      shadow: '0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12)',
+    },
+    dark: {
+      panel: '#2a2e36',
+      ink: '#ede1d8',
+      onInk: '#23262d',
+      line: '#454a55',
+      shadow: '0 1px 2px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.35)',
+    },
+  };
+  const theme = () => THEMES[window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'];
+  const buttonCss = (border, background, color) =>
+    `height:32px;padding:0 12px;border:1px solid ${border};border-radius:8px;background:${background};` +
+    `color:${color};font:600 13px/1 system-ui,sans-serif;cursor:pointer;`;
   const BAR_WIDTH = 240;
   const BAR_HEIGHT = 32;
 
@@ -141,6 +157,7 @@
   // Cmd+C) resolves with the same rectangle plus `copy: true`: the area goes to the clipboard instead of the editor.
   function selectArea() {
     return new Promise((resolve) => {
+      const t = theme();
       const create = (css) => {
         const element = document.createElement('div');
         element.style.cssText = css;
@@ -163,20 +180,19 @@
       }
       const hint = create(
         'position:fixed;top:12px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);' +
-          'padding:4px 12px;background:#fbf9f6;' +
-          'color:#3d434f;font:13px/1.45 system-ui,sans-serif;border:1px solid #dcd5cf;border-radius:8px;' +
-          'box-shadow:0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12);pointer-events:none;',
+          `padding:4px 12px;background:${t.panel};color:${t.ink};font:13px/1.45 system-ui,sans-serif;` +
+          `border:1px solid ${t.line};border-radius:8px;box-shadow:${t.shadow};pointer-events:none;`,
       );
       const bar = create('position:fixed;display:none;gap:8px;');
       const captureButton = document.createElement('button');
       captureButton.textContent = 'Capture';
-      captureButton.style.cssText = PRIMARY_BUTTON_CSS;
+      captureButton.style.cssText = buttonCss(t.ink, t.ink, t.onInk);
       const copyButton = document.createElement('button');
       copyButton.textContent = 'Copy';
-      copyButton.style.cssText = BUTTON_CSS;
+      copyButton.style.cssText = buttonCss(t.line, t.panel, t.ink);
       const cancelButton = document.createElement('button');
       cancelButton.textContent = 'Cancel';
-      cancelButton.style.cssText = BUTTON_CSS;
+      cancelButton.style.cssText = buttonCss(t.line, t.panel, t.ink);
       bar.append(captureButton, copyButton, cancelButton);
       overlay.append(box, hint, bar);
       document.documentElement.append(overlay);

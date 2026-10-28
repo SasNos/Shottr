@@ -34,13 +34,17 @@ export async function copyInPage(base64, message, toastMs) {
   } catch (error) {
     return { error: error.message };
   }
-  // Mber Flow toast values (theme.css is not loaded in the page): ink #3d434f, --radius-ctl 8 px, --fs-md 13 px.
+  // Mber Flow toast values (theme.css is not loaded in the page): --ink on --on-ink and --shadow, light or dark,
+  // --radius-ctl 8 px, --fs-md 13 px.
+  const [ink, onInk, shadow] = matchMedia('(prefers-color-scheme: dark)').matches
+    ? ['#ede1d8', '#23262d', '0 1px 2px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.35)']
+    : ['#3d434f', '#ffffff', '0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12)'];
   const toast = document.createElement('div');
   toast.textContent = message;
   toast.style.cssText =
     'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483647;padding:8px 16px;' +
-    'background:#3d434f;color:#ffffff;font:600 13px/1.45 system-ui,sans-serif;border-radius:8px;' +
-    'box-shadow:0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12);pointer-events:none;';
+    `background:${ink};color:${onInk};font:600 13px/1.45 system-ui,sans-serif;border-radius:8px;` +
+    `box-shadow:${shadow};pointer-events:none;`;
   document.documentElement.append(toast);
   setTimeout(() => toast.remove(), toastMs);
   return { ok: true };

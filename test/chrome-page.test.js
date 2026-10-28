@@ -9,7 +9,9 @@ let timers;
 let behavior = {};
 
 before(() => {
-  for (const name of ['document', 'navigator', 'ClipboardItem', 'setTimeout']) saved[name] = globalThis[name];
+  for (const name of ['document', 'navigator', 'ClipboardItem', 'setTimeout', 'matchMedia'])
+    saved[name] = globalThis[name];
+  globalThis.matchMedia = (query) => ({ matches: query === '(prefers-color-scheme: dark)' && behavior.dark === true });
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
     value: {
@@ -52,9 +54,19 @@ test('copyInPage puts the PNG on the clipboard and shows a short note', async ()
   const [toast] = document.documentElement.children;
   assert.equal(toast.textContent, 'Copied.');
   assert.match(toast.style.cssText, /position:fixed/);
+  assert.match(toast.style.cssText, /background:#3d434f;color:#ffffff;/);
   assert.equal(timers[0][1], 1600);
   timers[0][0]();
   assert.equal(toast.removed, true);
+});
+
+test('the copied note follows dark mode with the Mber Flow values', async () => {
+  reset();
+  behavior.dark = true;
+  await copyInPage('AQID', 'Copied.', 1600);
+  const [toast] = document.documentElement.children;
+  assert.match(toast.style.cssText, /background:#ede1d8;color:#23262d;/);
+  assert.match(toast.style.cssText, /rgba\(0,0,0,0\.35\)/);
 });
 
 test('copyInPage hands the PNG to the copy the selection started and waits for it', async () => {
