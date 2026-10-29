@@ -61,6 +61,7 @@
   --hover: #efe6df;
   --line: #dcd5cf;
   --line-2: #e9e3dd;
+  --scrim: rgba(61, 67, 79, 0.42);
   --white: #ffffff;
 
   /* accents */
@@ -95,6 +96,7 @@
   --hover: #353a44;
   --line: #454a55;
   --line-2: #363b44;
+  --scrim: rgba(0, 0, 0, 0.55);
   --accent: #f0a35e;
   --accent-strong: #ffc891;
   --accent-soft: #3a2f27;

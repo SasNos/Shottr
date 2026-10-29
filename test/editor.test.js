@@ -107,9 +107,12 @@ async function start({
     navigator,
     FileClass: FakeFile,
     ClipboardItemClass: FakeClipboardItem,
-    selectArea: async () => {
+    selectArea: async (options) => {
+      behavior.selectOptions = options;
       behavior.picture = { ...lastCreated('img') };
       behavior.picture.shown = lastCreated('img').parent === doc.body;
+      const scrim = doc.created.findLast((element) => element.className === 'pick-scrim');
+      behavior.scrimShown = Boolean(scrim) && scrim.parent === doc.body;
       return behavior.selection ?? null;
     },
     view,
@@ -570,6 +573,16 @@ test('a window capture is shown fitted into the view and the selected area becom
   );
   assert.equal(lastCreated('img').removed, true);
   assert.equal(el('status').textContent, '100 × 40 px');
+});
+
+test('the window picture is shown as a still image: dimmed editor behind it and its own hint', async () => {
+  behavior.selection = { x: 460, y: 380, width: 50, height: 20 };
+  await start({ job: WINDOW_JOB });
+  assert.equal(behavior.scrimShown, true, 'the editor behind the picture is dimmed while selecting');
+  assert.equal(doc.created.findLast((element) => element.className === 'pick-scrim').removed, true);
+  assert.deepEqual(behavior.selectOptions, {
+    hint: 'This is a still picture of the window. Drag on it to select an area. Esc cancels.',
+  });
 });
 
 test('a window larger than the view is shown scaled down and the selection is scaled back', async () => {

@@ -118,8 +118,8 @@ test('hideFixed hides fixed and sticky elements once, restore brings everything 
   assert.equal(fixed.style.getPropertyValue('visibility'), '');
 });
 
-function open() {
-  const pending = api.selectArea();
+function open(options) {
+  const pending = api.selectArea(options);
   const overlay = doc.documentElement.children.at(-1);
   const [box, hint, bar] = overlay.children;
   return {
@@ -292,6 +292,15 @@ test('the selection buttons get the Mber Flow focus ring (2 px --sel), light and
   assert.match(style.textContent, /outline:2px solid #f0a35e;/);
   await ui.cancelButton.emit('click');
   await ui.pending;
+});
+
+test('a caller can replace the first hint, the adjust hint stays', async () => {
+  const ui = open({ hint: 'Drag on the picture.' });
+  assert.equal(ui.hint.textContent, 'Drag on the picture.');
+  await frame(ui);
+  assert.match(ui.hint.textContent, /^Drag the handles to resize/);
+  await ui.cancelButton.emit('click');
+  assert.equal(await ui.pending, null);
 });
 
 test('C without Ctrl or Cmd does not copy', async () => {

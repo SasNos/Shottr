@@ -2,6 +2,8 @@ import { Annotations, drawAnnotations, drawSegment } from './annotations.js';
 import { buildFileName, canShareFiles, encode, flatten, triggerDownload } from './export.js';
 import { composeImage } from './stitch.js';
 
+const PICK_HINT = 'This is a still picture of the window. Drag on it to select an area. Esc cancels.';
+
 /** How long the editor stays open after copying on its own before it closes (see the end of initEditor). */
 export const CLIPBOARD_SETTLE_MS = 1000;
 
@@ -28,9 +30,13 @@ async function pickArea(job, { document, loadImage, selectArea, view }) {
     width: `${width * scale}px`,
     height: `${height * scale}px`,
   });
-  document.body.append(picture);
-  const rect = await selectArea();
+  // The picture looks like the live window, so the editor behind it is dimmed and the hint says it is a still image.
+  const scrim = document.createElement('div');
+  scrim.className = 'pick-scrim';
+  document.body.append(scrim, picture);
+  const rect = await selectArea({ hint: PICK_HINT });
   picture.remove();
+  scrim.remove();
   if (!rect) return null;
   const copy = rect.copy ? { copy: true } : {};
   const x = Math.max(0, (rect.x - left) / scale);

@@ -156,11 +156,20 @@ input[type='range'] {
   touch-action: none;
 }
 
-/* The captured window while an area is selected on it ("Selected area with DevTools"); placed by editor.js. */
+/* The captured window while an area is selected on it ("Selected area with DevTools"); placed by editor.js.
+   The editor behind it is dimmed and the picture framed in the accent color, so it reads as a still image. */
+.pick-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: var(--scrim);
+}
+
 .pick {
   position: fixed;
   z-index: 40;
-  box-shadow: var(--shadow);
+  outline: 2px solid var(--accent);
+  box-shadow: var(--shadow-lg);
 }
 
 /* A comment while it is typed. Its look is part of the screenshot (annotations.js draws the same black on white),

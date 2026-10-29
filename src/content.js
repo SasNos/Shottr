@@ -157,7 +157,8 @@
   // Lets the user draw a frame, then adjust it (resize, move, redraw) before confirming with Enter or the Capture button.
   // Resolves with {x, y, width, height} in viewport CSS pixels, or null when cancelled. The Copy button (or Ctrl+C,
   // Cmd+C) resolves with the same rectangle plus `copy: true`: the area goes to the clipboard instead of the editor.
-  function selectArea() {
+  // `hint` replaces the first hint (the editor uses it on the still picture of a window).
+  function selectArea({ hint: drawHint = DRAW_HINT } = {}) {
     return new Promise((resolve) => {
       const t = theme();
       const create = (css) => {
@@ -212,7 +213,7 @@
       const render = () => {
         box.style.display = rect ? 'block' : 'none';
         bar.style.display = rect && !mode ? 'flex' : 'none';
-        hint.textContent = rect ? ADJUST_HINT : DRAW_HINT;
+        hint.textContent = rect ? ADJUST_HINT : drawHint;
         if (rect) {
           place(box, rect);
           bar.style.left = `${clamp(rect.x, 8, window.innerWidth - BAR_WIDTH)}px`;
