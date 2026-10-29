@@ -127,7 +127,7 @@
   const DRAW_HINT = 'Drag to select an area. Esc cancels.';
   const ADJUST_HINT = 'Drag the handles to resize, drag inside to move. Enter captures, Ctrl+C copies, Esc cancels.';
   // The selection UI lives in the page, where theme.css is not loaded, so it carries the Mber Flow values itself
-  // (--panel, --ink, --on-ink, --line, --shadow for light and dark; --h-bar 32 px, --radius-ctl 8 px, --fs-md 13 px,
+  // (--panel, --ink, --on-ink, --line, --sel, --shadow for light and dark; --h-bar 32 px, --radius-ctl 8 px, --fs-md 13 px,
   // 4 px grid). The frame and the handles stay black and white so they are visible on any page.
   const THEMES = {
     light: {
@@ -135,6 +135,7 @@
       ink: '#3d434f',
       onInk: '#ffffff',
       line: '#dcd5cf',
+      sel: '#c8501f',
       shadow: '0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12)',
     },
     dark: {
@@ -142,6 +143,7 @@
       ink: '#ede1d8',
       onInk: '#23262d',
       line: '#454a55',
+      sel: '#f0a35e',
       shadow: '0 1px 2px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.35)',
     },
   };
@@ -193,8 +195,15 @@
       const cancelButton = document.createElement('button');
       cancelButton.textContent = 'Cancel';
       cancelButton.style.cssText = buttonCss(t.line, t.panel, t.ink);
+      // Inline styles cannot express :focus-visible, so the focus ring of the style guide (2 px --sel) comes from a
+      // style element that lives in the overlay and leaves the page with it.
+      const focusStyle = document.createElement('style');
+      focusStyle.textContent =
+        '[data-shottr="button"]{outline:none}' +
+        `[data-shottr="button"]:focus-visible{outline:2px solid ${t.sel};outline-offset:2px}`;
+      for (const button of [captureButton, copyButton, cancelButton]) button.dataset.shottr = 'button';
       bar.append(captureButton, copyButton, cancelButton);
-      overlay.append(box, hint, bar);
+      overlay.append(box, hint, bar, focusStyle);
       document.documentElement.append(overlay);
 
       let rect = null;

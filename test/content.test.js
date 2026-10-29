@@ -274,6 +274,26 @@ test('the selection UI carries the Mber Flow values for light and dark', async (
   await ui.pending;
 });
 
+test('the selection buttons get the Mber Flow focus ring (2 px --sel), light and dark', async () => {
+  let ui = open();
+  let style = ui.overlay.children.find((child) => child.tagName === 'style');
+  for (const button of ui.bar.children) assert.equal(button.dataset.shottr, 'button');
+  assert.equal(
+    style.textContent,
+    '[data-shottr="button"]{outline:none}[data-shottr="button"]:focus-visible{outline:2px solid #c8501f;outline-offset:2px}',
+  );
+  await ui.cancelButton.emit('click');
+  await ui.pending;
+  assert.equal(ui.overlay.removed, true, 'the style leaves the page with the selection');
+
+  window.dark = true;
+  ui = open();
+  style = ui.overlay.children.find((child) => child.tagName === 'style');
+  assert.match(style.textContent, /outline:2px solid #f0a35e;/);
+  await ui.cancelButton.emit('click');
+  await ui.pending;
+});
+
 test('C without Ctrl or Cmd does not copy', async () => {
   const ui = open();
   await frame(ui);
