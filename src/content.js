@@ -3,7 +3,7 @@
   const SETTLE_MS = 250;
   const OVERLAY_GONE_MS = 120;
   const MIN_SELECTION = 5;
-  const saved = { x: 0, y: 0, hidden: new Map(), cancelled: false, copy: null };
+  const saved = { x: 0, y: 0, scroller: null, scrollerTop: 0, hidden: new Map(), cancelled: false, copy: null };
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -33,12 +33,57 @@
     if (event.key === 'Escape') saved.cancelled = true;
   };
 
+  const SCROLLING = new Set(['auto', 'scroll', 'overlay']);
+  const MIN_SCROLLER_SHARE = 0.4;
+
+  // Part of the element's border box that is inside the viewport, in CSS px.
+  function visibleBox(element) {
+    const rect = element.getBoundingClientRect();
+    const left = Math.max(0, rect.left + element.clientLeft);
+    const top = Math.max(0, rect.top + element.clientTop);
+    const right = Math.min(window.innerWidth, rect.left + element.clientLeft + element.clientWidth);
+    const bottom = Math.min(window.innerHeight, rect.top + element.clientTop + element.clientHeight);
+    return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+  }
+
+  // Many apps scroll an inner element and leave the document at viewport height; window.scrollTo does nothing there.
+  // Returns that element, or null when the document itself scrolls (or nothing big enough does).
+  function findScroller() {
+    const root = document.documentElement;
+    const rootOverflow = getComputedStyle(root).overflowY;
+    if (root.scrollHeight > window.innerHeight + 1 && rootOverflow !== 'hidden' && rootOverflow !== 'clip') return null;
+    let best = null;
+    let bestArea = window.innerWidth * window.innerHeight * MIN_SCROLLER_SHARE;
+    for (const element of document.querySelectorAll('*')) {
+      if (!SCROLLING.has(getComputedStyle(element).overflowY)) continue;
+      if (element.scrollHeight <= element.clientHeight + 1) continue;
+      const box = visibleBox(element);
+      const area = box.width * box.height;
+      if (area >= bestArea) {
+        best = element;
+        bestArea = area;
+      }
+    }
+    return best;
+  }
+
   function measure() {
     saved.x = window.scrollX;
     saved.y = window.scrollY;
     saved.cancelled = false;
     document.removeEventListener('keydown', onCancelKey, true);
     document.addEventListener('keydown', onCancelKey, true);
+    saved.scroller = findScroller();
+    if (saved.scroller) {
+      saved.scrollerTop = saved.scroller.scrollTop;
+      const clip = visibleBox(saved.scroller);
+      return {
+        viewportWidth: window.innerWidth,
+        viewportHeight: clip.height,
+        pageHeight: saved.scroller.scrollHeight,
+        clip,
+      };
+    }
     return {
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
@@ -47,6 +92,11 @@
   }
 
   async function scrollTo(y) {
+    if (saved.scroller) {
+      saved.scroller.scrollTop = y;
+      await delay(SETTLE_MS);
+      return saved.scroller.scrollTop;
+    }
     window.scrollTo(0, y);
     await delay(SETTLE_MS);
     return window.scrollY;
@@ -75,6 +125,8 @@
       else element.style.removeProperty('visibility');
     }
     saved.hidden.clear();
+    if (saved.scroller) saved.scroller.scrollTop = saved.scrollerTop;
+    saved.scroller = null;
     window.scrollTo(saved.x, saved.y);
   }
 

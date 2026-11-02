@@ -4,7 +4,7 @@ Chrome extension (Manifest V3, no build step, no runtime dependencies; the dev d
 
 ## Features
 
-- **Full page**: scrolls the page and stitches the screenshots. Only the page content is captured, never the browser UI.
+- **Full page**: scrolls the page (or the app's main scroll area) and stitches the screenshots. Only the page content is captured, never the browser UI.
 - **Selected area**: drag a frame, then adjust it (eight handles to resize, drag inside to move) and confirm with Enter, the Capture button or a double click. Copy (or Ctrl+C, Cmd+C) puts the area straight on the clipboard as PNG without opening the editor; where the page cannot (http pages have no clipboard access), the editor opens briefly, copies the area and closes again. Esc cancels.
 - **Selected area with DevTools**: for areas that include the DevTools or other parts of the window. Chrome asks which window to share, Shottr takes one picture of it, and the area is selected on that picture (same handles and keys as above). The page screenshot functions of Chrome never contain the DevTools, so this mode needs the desktop capture dialog every time.
 - **Visible part**: the current viewport.
@@ -42,7 +42,7 @@ npm run icons     # regenerate icons/ (only needed when the icon design changes)
 
 ## Limitations
 
-- Full page scrolls the page itself. Content inside a separately scrolling container (an inner scroll area of a web app) is not stitched.
+- Full page scrolls the document, or, when the document cannot scroll, the largest scrolling element that fills at least 40 % of the window. Several scroll areas side by side are not combined; only the largest is captured.
 - Fixed and sticky elements appear in the first tile only; they are hidden while the remaining tiles are captured.
 - Pages are capped at 30000 CSS px of height; the stitched image is scaled down if it exceeds the canvas limits of Chrome (16384 px per side).
 - Chrome does not allow capturing `chrome://` pages and the Chrome Web Store; the toolbar button then shows a `!` with the reason as tooltip.

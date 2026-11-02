@@ -117,6 +117,22 @@ test('full page capture scrolls through the page and hides fixed elements after 
   assert.equal(log.at(-1), 'restore');
 });
 
+test('full page capture of a scrolling panel keeps the area the panel occupies', async () => {
+  const clip = { x: 100, y: 50, width: 800, height: 600 };
+  const { capturer, scrollPositions } = setup({
+    metrics: { viewportWidth: 1000, viewportHeight: 600, pageHeight: 1500, clip },
+  });
+  const job = await capturer.capture(tab, 'full');
+  assert.deepEqual(scrollPositions(), [0, 600, 900]);
+  assert.deepEqual(job.clip, clip);
+  assert.equal(job.pageHeight, 1500);
+});
+
+test('full page capture of the document carries no clip', async () => {
+  const { capturer } = setup({ metrics: { viewportWidth: 1000, viewportHeight: 800, pageHeight: 1600 } });
+  assert.equal('clip' in (await capturer.capture(tab, 'full')), false);
+});
+
 test('Esc during a full page capture stops it, returns nothing and restores the page', async () => {
   const { capturer, log, scrollPositions } = setup({
     metrics: { viewportWidth: 1000, viewportHeight: 800, pageHeight: 3000 },

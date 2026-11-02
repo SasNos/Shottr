@@ -33,7 +33,10 @@ before(async () => {
     callback();
     return 0;
   };
-  globalThis.getComputedStyle = (element) => ({ position: element.position });
+  globalThis.getComputedStyle = (element) => ({
+    position: element.position,
+    overflowY: element.overflowY ?? 'visible',
+  });
   await import('../src/content.js');
   api = globalThis.__shottr;
 });
@@ -68,6 +71,109 @@ beforeEach(() => {
 
 test('measure reports the viewport and the page height', () => {
   assert.deepEqual(api.measure(), { viewportWidth: 1000, viewportHeight: 700, pageHeight: 1200 });
+});
+
+// A panel that scrolls inside the page: the document itself has nothing to scroll (innerHeight is 700).
+function panel(overrides = {}) {
+  const element = new FakeElement();
+  Object.assign(
+    element,
+    {
+      overflowY: 'auto',
+      scrollHeight: 3000,
+      clientHeight: 600,
+      clientWidth: 800,
+      clientLeft: 0,
+      clientTop: 0,
+      scrollTop: 0,
+    },
+    overrides,
+  );
+  element.rect = { left: 100, top: 50, width: 800, height: 600, ...overrides.rect };
+  return element;
+}
+
+test('measure scrolls the largest scrolling element when the document cannot scroll', () => {
+  const small = panel({ rect: { width: 100, height: 100 }, clientWidth: 100, clientHeight: 100 });
+  const main = panel();
+  doc.documentElement.scrollHeight = 700;
+  doc.selectors['*'] = [small, main, new FakeElement()];
+  assert.deepEqual(api.measure(), {
+    viewportWidth: 1000,
+    viewportHeight: 600,
+    pageHeight: 3000,
+    clip: { x: 100, y: 50, width: 800, height: 600 },
+  });
+});
+
+test('measure scrolls the body when the document is set to overflow hidden', () => {
+  const body = panel({ rect: { left: 0, top: 0, width: 1000, height: 700 }, clientWidth: 1000, clientHeight: 700 });
+  doc.documentElement.overflowY = 'hidden';
+  doc.documentElement.scrollHeight = 5000;
+  doc.selectors['*'] = [body];
+  assert.equal(api.measure().pageHeight, 3000);
+  doc.documentElement.overflowY = 'clip';
+  assert.equal(api.measure().clip.width, 1000);
+});
+
+test('measure keeps the document when it scrolls, even if a panel scrolls too', () => {
+  doc.documentElement.scrollHeight = 5000;
+  doc.selectors['*'] = [panel()];
+  assert.deepEqual(api.measure(), { viewportWidth: 1000, viewportHeight: 700, pageHeight: 5000 });
+});
+
+test('measure ignores elements that cannot scroll or are too small, and keeps the larger of two panels', () => {
+  doc.documentElement.scrollHeight = 700;
+  const hiddenOverflow = panel({ overflowY: 'hidden' });
+  const nothingToScroll = panel({ scrollHeight: 600 });
+  const tiny = panel({ rect: { width: 200, height: 100 }, clientWidth: 200, clientHeight: 100 });
+  const offscreen = panel({ rect: { left: 2000, top: 0 } });
+  const smaller = panel({ rect: { width: 700, height: 500 }, clientWidth: 700, clientHeight: 500 });
+  const scrollbarPanel = panel({ overflowY: 'scroll', scrollHeight: 4000 });
+  doc.selectors['*'] = [hiddenOverflow, nothingToScroll, tiny, offscreen, smaller, scrollbarPanel];
+  assert.deepEqual(api.measure(), {
+    viewportWidth: 1000,
+    viewportHeight: 600,
+    pageHeight: 4000,
+    clip: { x: 100, y: 50, width: 800, height: 600 },
+  });
+  doc.selectors['*'] = [hiddenOverflow, nothingToScroll, tiny, offscreen];
+  assert.equal(api.measure().clip, undefined, 'nothing qualifies, so the document is captured as before');
+});
+
+test('measure clips the panel to the viewport and counts its border', () => {
+  doc.documentElement.scrollHeight = 700;
+  doc.selectors['*'] = [
+    panel({
+      rect: { left: -20, top: 400, width: 1200, height: 900 },
+      clientLeft: 2,
+      clientTop: 3,
+      clientWidth: 1196,
+      clientHeight: 894,
+    }),
+  ];
+  assert.deepEqual(api.measure().clip, { x: 0, y: 403, width: 1000, height: 297 });
+});
+
+test('scrollTo moves the panel and restore puts it back', async () => {
+  const main = panel({ scrollTop: 40 });
+  doc.documentElement.scrollHeight = 700;
+  doc.selectors['*'] = [main];
+  api.measure();
+  main.scrollTop = 40;
+  Object.defineProperty(main, 'scrollTop', {
+    configurable: true,
+    get: () => main.top ?? 40,
+    set: (value) => {
+      main.top = Math.min(value, 2400);
+    },
+  });
+  assert.equal(await api.scrollTo(900), 900);
+  assert.equal(await api.scrollTo(3000), 2400, 'reports the position that was reached');
+  assert.deepEqual(scrolls, []);
+  api.restore();
+  assert.equal(main.top, 40);
+  assert.deepEqual(scrolls, [[4, 30]]);
 });
 
 test('Esc on the page marks the capture as cancelled until the next capture', () => {
