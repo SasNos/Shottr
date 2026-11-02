@@ -8,14 +8,28 @@ function cropImage(image, crop, ratio, createCanvas) {
 }
 
 function stitchTiles(images, job, ratio, createCanvas) {
-  const width = images[0].width;
-  const height = Math.max(images[0].height, Math.round(job.pageHeight * ratio));
+  // A scrolling panel is stitched from its own area only; the rest of each screenshot (menus, sidebars) is left out.
+  const area = job.clip && cropToPixels(job.clip, ratio, images[0]);
+  const width = area ? area.width : images[0].width;
+  const height = Math.max(area ? area.height : images[0].height, Math.round(job.pageHeight * ratio));
   const fit = fitCanvas(width, height);
   const canvas = createCanvas(fit.width, fit.height);
   const ctx = canvas.getContext('2d');
   images.forEach((image, index) => {
     const top = Math.round(job.tiles[index].y * ratio * fit.scale);
-    ctx.drawImage(image, 0, top, fit.width, Math.ceil(image.height * fit.scale));
+    if (area)
+      ctx.drawImage(
+        image,
+        area.x,
+        area.y,
+        area.width,
+        area.height,
+        0,
+        top,
+        fit.width,
+        Math.ceil(area.height * fit.scale),
+      );
+    else ctx.drawImage(image, 0, top, fit.width, Math.ceil(image.height * fit.scale));
   });
   return { canvas, ratio: ratio * fit.scale };
 }

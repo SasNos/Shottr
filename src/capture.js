@@ -34,7 +34,7 @@ export function createCapturer({ page }) {
         tiles.push({ dataUrl: await page.grab(tab), y });
         await page.call(tab, 'hideFixed');
       }
-      return { tiles, crop: null, pageHeight };
+      return { tiles, crop: null, pageHeight, ...(metrics.clip && { clip: metrics.clip }) };
     },
   };
 

@@ -83,3 +83,25 @@ test('composeImage scales down pages that exceed the canvas limit', async () => 
   assert.equal(ratio, 0.5);
   assert.deepEqual(draws(canvas)[1], [0, 15884, 500, 500]);
 });
+
+test('composeImage stitches only the clipped area of each tile for a scrolling panel', async () => {
+  const deps = setup({ width: 200, height: 100 });
+  const job = {
+    tiles: [
+      { dataUrl: 'a', y: 0 },
+      { dataUrl: 'b', y: 40 },
+    ],
+    viewportWidth: 100,
+    crop: null,
+    clip: { x: 10, y: 20, width: 30, height: 25 },
+    pageHeight: 65,
+  };
+  const { canvas, ratio } = await composeImage(job, deps);
+  assert.equal(canvas.width, 60);
+  assert.equal(canvas.height, 130);
+  assert.equal(ratio, 2);
+  assert.deepEqual(draws(canvas), [
+    [20, 40, 60, 50, 0, 0, 60, 50],
+    [20, 40, 60, 50, 0, 80, 60, 50],
+  ]);
+});
