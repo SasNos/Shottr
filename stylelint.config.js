@@ -1,5 +1,7 @@
 export default {
   extends: ['stylelint-config-standard'],
+  // Generated from Mber Flow by `npm run tokens`; `npm run tokens:check` guards it instead.
+  ignoreFiles: ['src/theme.css'],
   rules: {
     // Notation follows Mber Flow's theme.css, the design source shared with Spark: six digit hex, rgba().
     'color-hex-length': null,
@@ -16,11 +18,4 @@ export default {
       '/^(font-size|line-height|border-radius|padding|margin|gap|row-gap|column-gap)/': ['px'],
     },
   },
-  overrides: [
-    {
-      // The only place where raw values are defined.
-      files: ['src/theme.css'],
-      rules: { 'color-no-hex': null, 'declaration-property-unit-disallowed-list': null },
-    },
-  ],
 };

@@ -357,24 +357,24 @@ test('Ctrl+C without a frame neither copies nor closes the selection', async () 
 
 test('the selection UI carries the Mber Flow values for light and dark', async () => {
   let ui = open();
-  assert.match(ui.hint.style.cssText, /background:#fbf9f6;color:#3d434f;/);
-  assert.match(ui.hint.style.cssText, /border:1px solid #dcd5cf;/);
+  assert.match(ui.hint.style.cssText, /background:#eae2df;color:#1d2026;/);
+  assert.match(ui.hint.style.cssText, /border:1px solid #c9c0bb;/);
   assert.match(
     ui.captureButton.style.cssText,
-    /border:1px solid #3d434f;border-radius:8px;background:#3d434f;color:#ffffff;/,
+    /border:1px solid #1d2026;border-radius:8px;background:#1d2026;color:#eeebea;/,
   );
-  assert.match(ui.copyButton.style.cssText, /height:32px;.*background:#fbf9f6;color:#3d434f;/);
+  assert.match(ui.copyButton.style.cssText, /height:32px;.*background:#eae2df;color:#1d2026;/);
   await ui.cancelButton.emit('click');
   await ui.pending;
 
   window.dark = true;
   ui = open();
-  assert.match(ui.hint.style.cssText, /background:#2a2e36;color:#ede1d8;/);
-  assert.match(ui.hint.style.cssText, /border:1px solid #454a55;/);
+  assert.match(ui.hint.style.cssText, /background:#31363f;color:#eae2df;/);
+  assert.match(ui.hint.style.cssText, /border:1px solid #5a606c;/);
   assert.match(ui.hint.style.cssText, /rgba\(0,0,0,0\.35\)/, 'dark shadow');
   assert.match(
     ui.captureButton.style.cssText,
-    /border:1px solid #ede1d8;border-radius:8px;background:#ede1d8;color:#23262d;/,
+    /border:1px solid #eae2df;border-radius:8px;background:#eae2df;color:#272c34;/,
   );
   await ui.cancelButton.emit('click');
   await ui.pending;
@@ -386,7 +386,7 @@ test('the selection buttons get the Mber Flow focus ring (2 px --sel), light and
   for (const button of ui.bar.children) assert.equal(button.dataset.shottr, 'button');
   assert.equal(
     style.textContent,
-    '[data-shottr="button"]{outline:none}[data-shottr="button"]:focus-visible{outline:2px solid #c8501f;outline-offset:2px}',
+    '[data-shottr="button"]{outline:none}[data-shottr="button"]:focus-visible{outline:2px solid #7a6254;outline-offset:2px}',
   );
   await ui.cancelButton.emit('click');
   await ui.pending;

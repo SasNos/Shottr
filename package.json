@@ -5,10 +5,13 @@
   "type": "module",
   "description": "Chrome extension: full page, area and viewport screenshots with annotations, saved as PNG, WebP or PDF.",
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\"",
-    "coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \"test/**/*.test.js\"",
-    "lint": "eslint . && stylelint \"src/**/*.css\" && prettier --check .",
+    "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-include=\"tools/tokens.mjs\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \"test/**/*.test.js\"",
+    "lint": "eslint . && stylelint \"src/**/*.css\"",
     "format": "prettier --write . && eslint --fix . && stylelint --fix \"src/**/*.css\"",
+    "format:check": "prettier --check .",
+    "tokens": "node tools/tokens.mjs",
+    "tokens:check": "node tools/tokens.mjs --check",
+    "check": "npm run lint && npm run format:check && npm run tokens:check && npm test",
     "icons": "node tools/make-icons.mjs"
   },
   "devDependencies": {

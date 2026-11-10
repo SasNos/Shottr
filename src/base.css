@@ -1,0 +1,39 @@
+/* Shottr's own additions to the generated Mber Flow tokens in theme.css (`npm run tokens`), shared by every page:
+   motion tokens, the heading font, the focus ring and "reduce motion". Uses only theme.css variables. */
+:root {
+  /* motion */
+  --t-hover: 0.12s;
+  --t-fade: 0.2s;
+}
+
+/* Style guide: headings in Figtree (--font-1), everything else in Open Sans (--font). */
+h1,
+h2,
+h3 {
+  font-family: var(--font-1);
+}
+
+/* Keyboard focus is always visible: one focus ring, 2 px in --sel. Inputs show it as an --accent border with a
+   3 px --accent-soft halo instead (Mber Flow style guide). */
+:focus-visible {
+  outline: 2px solid var(--sel);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* "Reduce motion" turns off every transition and animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -35,10 +35,10 @@ export async function copyInPage(base64, message, toastMs) {
     return { error: error.message };
   }
   // Mber Flow toast values (theme.css is not loaded in the page): --ink on --on-ink and --shadow, light or dark,
-  // --radius-ctl 8 px, --fs-md 13 px.
+  // --radius-ctl 8 px, --fs-md 13 px; test/inpage-theme.test.js keeps them equal to theme.css.
   const [ink, onInk, shadow] = matchMedia('(prefers-color-scheme: dark)').matches
-    ? ['#ede1d8', '#23262d', '0 1px 2px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.35)']
-    : ['#3d434f', '#ffffff', '0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12)'];
+    ? ['#eae2df', '#272c34', '0 1px 2px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.35)']
+    : ['#1d2026', '#eeebea', '0 1px 2px rgba(61,67,79,0.08),0 8px 24px rgba(61,67,79,0.12)'];
   const toast = document.createElement('div');
   toast.textContent = message;
   toast.style.cssText =
