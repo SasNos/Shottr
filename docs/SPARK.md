@@ -6,17 +6,17 @@ side is built yet.
 
 ## What is shared and what is Chrome only
 
-| Part                           | Files                                                                     | In Spark                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Capture pipeline               | `src/capture.js`, `src/layout.js`                                         | reused as is, with Spark's page host                                                    |
-| Page script                    | `src/content.js`                                                          | injected into the tab by Spark                                                          |
-| Stitching, annotations, export | `src/stitch.js`, `src/annotations.js`, `src/export.js`, `src/pdf.js`      | reused as is                                                                            |
-| Editor                         | `src/editor.js`, `src/editor.html`, `src/editor.css`, `src/theme.css`     | reused as a Spark page in the chrome web view, with Spark's editor host                 |
-| Chrome hosts                   | `src/hosts/chrome-page.js`, `src/hosts/chrome-editor.js`                  | replaced by Spark hosts                                                                 |
-| Extension shell                | `manifest.json`, `src/background.js`, `src/popup.*`, `src/editor-main.js` | replaced: toolbar or menu entry and shortcut in Spark, Rust module for the capture flow |
+| Part                           | Files                                                                                 | In Spark                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Capture pipeline               | `src/capture.js`, `src/layout.js`                                                     | reused as is, with Spark's page host                                                    |
+| Page script                    | `src/content.js`                                                                      | injected into the tab by Spark                                                          |
+| Stitching, annotations, export | `src/stitch.js`, `src/annotations.js`, `src/export.js`, `src/pdf.js`                  | reused as is                                                                            |
+| Editor                         | `src/editor.js`, `src/editor.html`, `src/editor.css`, `src/theme.css`, `src/base.css` | reused as a Spark page in the chrome web view, with Spark's editor host                 |
+| Chrome hosts                   | `src/hosts/chrome-page.js`, `src/hosts/chrome-editor.js`                              | replaced by Spark hosts                                                                 |
+| Extension shell                | `manifest.json`, `src/background.js`, `src/popup.*`, `src/editor-main.js`             | replaced: toolbar or menu entry and shortcut in Spark, Rust module for the capture flow |
 
-The look already follows Spark: `src/theme.css` holds the Mber Flow tokens with the same names, and Spark sets
-`data-theme` itself.
+The look already follows Spark: `src/theme.css` is generated from the Mber Flow tokens with the same names (`npm run
+tokens`), and Spark sets `data-theme` itself.
 
 ## The two host interfaces
 
