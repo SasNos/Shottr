@@ -3,12 +3,13 @@
 // Ratings), so a fix here is copied to the others. The tool lists the tokens it needs in tokens.config.json.
 //
 //   npm run tokens         regenerate the token file and the fonts from Mber Flow, report a style guide drift
-//   npm run tokens:check   fail when the token file is out of date (Mber Flow present) or hand-edited (Mber Flow absent)
+//   npm run tokens:check   fail when the token file or the fonts are out of date (Mber Flow present) or the token
+//                          file was edited by hand (Mber Flow absent)
 //
 // Mber Flow is looked up in MBER_FLOW_DIR, else next to the Spark folder (../../../Mber Web/Mber Flow).
 // All decisions are pure functions over an `io` object, so they are tested without touching the disk.
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,12 +17,41 @@ export const DEFAULT_SOURCE_DIRS = ['../../../Mber Web/Mber Flow'];
 export const STATE_FILE = 'tokens.source.json';
 const THEME = 'app/src/theme.css';
 const FONTS = 'app/src/fonts';
-const FONT_URL = /url\(\s*['"]?\.\/fonts\/([^'")]+)['"]?\s*\)/g;
+// A font of Mber Flow: url('./fonts/x.woff2'), url("fonts/x.woff2") or url(fonts/x.woff2).
+const FONT_URL = /url\(\s*(['"]?)(?:\.\/)?fonts\/([^'")]+)\1\s*\)/g;
+const HEADER =
+  "/* Generated from Mber Flow's app/src/theme.css. Do not edit: `npm run tokens` regenerates it (tools/tokens.mjs, " +
+  'tokens.config.json). */';
 
 /** Removes CSS comments. */
 export const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** Top level blocks of a stylesheet: `[{ prelude, body }]`; nested blocks (media queries) stay in their body. */
+/** Splits `text` at `separator`, but not inside quotes or parentheses. */
+export function splitTopLevel(text, separator) {
+  const parts = [];
+  let depth = 0;
+  let quote = null;
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (quote) {
+      if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === '(') depth += 1;
+    else if (char === ')') depth -= 1;
+    else if (char === separator && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
+
+/**
+ * Top level blocks of a stylesheet: `[{ prelude, body }]`; nested blocks (media queries) stay in their body, and
+ * statements such as `@import ...;` or `@layer x;` before a block do not end up in its prelude.
+ */
 export function topLevelBlocks(css) {
   const blocks = [];
   let depth = 0;
@@ -37,7 +67,7 @@ export function topLevelBlocks(css) {
         blocks.push({ prelude: css.slice(start, open).trim(), body: css.slice(open + 1, i) });
         start = i + 1;
       }
-    }
+    } else if (css[i] === ';' && depth === 0) start = i + 1;
   }
   return blocks;
 }
@@ -45,7 +75,7 @@ export function topLevelBlocks(css) {
 /** `{ name: value }` for every custom property declared in a block body. */
 export function declarations(body) {
   const out = {};
-  for (const part of body.split(';')) {
+  for (const part of splitTopLevel(body, ';')) {
     const match = part.match(/^\s*(--[\w-]+)\s*:\s*([\s\S]+?)\s*$/);
     if (match) out[match[1]] = match[2].replace(/\s+/g, ' ');
   }
@@ -68,16 +98,34 @@ export function parseTheme(css) {
   return theme;
 }
 
-/** Replaces every `var(--name)` (and `var(--name, fallback)`) by its value until only literal values are left. */
-export function resolveValue(value, map, depth = 0) {
-  if (!value.includes('var(')) return value;
-  if (depth > 16) throw new Error(`token reference too deep: ${value}`);
-  const next = value.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^()]*))?\)/g, (whole, name, fallback) => {
-    if (name in map) return map[name];
-    if (fallback !== undefined) return fallback.trim();
-    throw new Error(`unknown token ${name}`);
-  });
-  return resolveValue(next, map, depth + 1);
+/** Replaces the first `var(--name)` or `var(--name, fallback)` (fallbacks may hold parentheses and other `var()`). */
+function replaceFirstVar(value, map) {
+  const at = value.indexOf('var(');
+  let depth = 0;
+  let end = at + 3;
+  do {
+    if (value[end] === '(') depth += 1;
+    else if (value[end] === ')') depth -= 1;
+    end += 1;
+  } while (depth > 0 && end < value.length);
+  if (depth > 0) throw new Error(`unbalanced var(): ${value}`);
+  const [name, ...rest] = splitTopLevel(value.slice(at + 4, end - 1), ',');
+  const key = name.trim();
+  let replacement;
+  if (key in map) replacement = map[key];
+  else if (rest.length) replacement = rest.join(',').trim();
+  else throw new Error(`unknown token ${key}`);
+  return value.slice(0, at) + replacement + value.slice(end);
+}
+
+/** Replaces every `var()` by its value until only literal values are left. */
+export function resolveValue(value, map) {
+  let result = value;
+  for (let step = 0; result.includes('var('); step += 1) {
+    if (step > 64) throw new Error(`token reference too deep: ${value}`);
+    result = replaceFirstVar(result, map);
+  }
+  return result;
 }
 
 /** The literal light and dark values of the listed tokens. */
@@ -93,29 +141,30 @@ export function pickTokens(theme, names) {
   }));
 }
 
-/** The font files named in the `@font-face` rules, in order, without repeats. */
+/** The font files named in the `@font-face` rules, in order, without repeats. Other font URLs are an error. */
 export function fontFiles(fontFaces) {
-  const files = fontFaces.flatMap((rule) => [...rule.matchAll(FONT_URL)].map((m) => m[1]));
+  for (const rule of fontFaces) {
+    const other = rule.replace(FONT_URL, '').match(/url\([^)]*\)/);
+    if (other) throw new Error(`font outside Mber Flow's fonts folder: ${other[0]}`);
+  }
+  const files = fontFaces.flatMap((rule) => [...rule.matchAll(FONT_URL)].map((m) => m[2]));
   return [...new Set(files)];
 }
 
 /**
- * The generated stylesheet (it depends only on theme.css, not on Mber Flow's version): header, font faces (pointing at `config.fontUrl`), light tokens, dark tokens. With
- * `dark: 'attribute'` the tool owns its page (`data-theme` on <html>), so `color-scheme` is set as in Mber Flow; with
- * `dark: 'media'` the tokens go into someone else's page (a content script) and only custom properties are written.
+ * The generated stylesheet: header, font faces (pointing at `config.fontUrl`), light tokens, dark tokens. It depends
+ * only on the tokens, not on comments or the version of Mber Flow. With `dark: 'attribute'` the tool owns its page
+ * (`data-theme` on <html>), so `color-scheme` is set as in Mber Flow; with `dark: 'media'` the tokens go into someone
+ * else's page (a content script) and only custom properties are written.
  */
-export function render({ config, theme, sourceHash }) {
+export function render({ config, theme }) {
   const prefix = config.prefix ?? '';
   const owned = config.dark !== 'media';
   const tokens = pickTokens(theme, config.tokens);
   const rename = (name) => `--${prefix}${name.slice(2)}`;
-  const lines = [
-    `/* Generated from Mber Flow app/src/theme.css (sha256 ${sourceHash.slice(0, 12)}). Do not edit: ` +
-      '`npm run tokens` regenerates it (tools/tokens.mjs, tokens.config.json). */',
-  ];
+  const lines = [HEADER];
   for (const rule of theme.fontFaces) {
-    const body = rule.replace(FONT_URL, (whole, file) => `url('${config.fontUrl}${file}')`);
-    lines.push(`@font-face { ${body} }`);
+    lines.push(`@font-face { ${rule.replace(FONT_URL, (whole, quote, file) => `url('${config.fontUrl}${file}')`)} }`);
   }
   const light = tokens.map((t) => `${rename(t.name)}: ${t.light};`);
   const dark = tokens.filter((t) => t.dark !== t.light).map((t) => `${rename(t.name)}: ${t.dark};`);
@@ -140,6 +189,15 @@ const readJson = (io, path) => {
   return text === null ? null : JSON.parse(text);
 };
 
+/** What is wrong with the fonts in `fontDir`: missing or different files, and fonts Mber Flow no longer has. */
+function fontProblems(io, source, fontDir, files) {
+  const problems = files
+    .filter((file) => io.fileHash(`${fontDir}/${file}`) !== io.fileHash(`${source}/${FONTS}/${file}`))
+    .map((file) => `${fontDir}/${file} is missing or differs from Mber Flow`);
+  const extra = io.list(fontDir).filter((file) => file.endsWith('.woff2') && !files.includes(file));
+  return [...problems, ...extra.map((file) => `${fontDir}/${file} is no longer in Mber Flow`)];
+}
+
 /** Runs the sync (`[]`) or the check (`['--check']`) and returns the exit code. */
 export function runTokens(args, io) {
   const check = args.includes('--check');
@@ -162,32 +220,41 @@ export function runTokens(args, io) {
     return 0;
   }
 
-  const css = io.read(`${source}/${THEME}`);
+  // Line endings depend on the checkout, so they do not count as a change.
+  const css = io.read(`${source}/${THEME}`).replace(/\r\n/g, '\n');
   const sourceHash = io.hash(css);
   const version = readJson(io, `${source}/app/package.json`)?.version ?? 'unknown';
   let text;
+  let files;
   try {
-    text = render({ config, theme: parseTheme(css), sourceHash });
+    const theme = parseTheme(css);
+    text = render({ config, theme });
+    files = fontFiles(theme.fontFaces);
   } catch (error) {
     io.log(`cannot generate ${config.output}: ${error.message}`);
     return 1;
   }
-  const files = fontFiles(parseTheme(css).fontFaces);
 
   if (check) {
-    const stale = text !== current || files.some((file) => !io.exists(`${config.fontDir}/${file}`));
-    if (stale) {
-      io.log(`STYLE GUIDE DRIFT: ${config.output} does not match Mber Flow ${version}; run \`npm run tokens\``);
-      return 1;
-    }
-    return 0;
+    const problems = fontProblems(io, source, config.fontDir, files);
+    if (text !== current) problems.unshift(`${config.output} does not match Mber Flow ${version}`);
+    for (const problem of problems) io.log(`STYLE GUIDE DRIFT: ${problem}; run \`npm run tokens\``);
+    return problems.length ? 1 : 0;
   }
 
   if (state && state.source !== sourceHash) io.log(`STYLE GUIDE DRIFT: Mber Flow ${state.version} -> ${version}`);
-  io.write(config.output, text);
-  for (const file of [...files, ...['LICENSE-Figtree.txt', 'LICENSE-OpenSans.txt']]) {
-    io.copy(`${source}/${FONTS}/${file}`, `${config.fontDir}/${file}`);
+  try {
+    // Fonts first: when a copy fails, the token file and the record stay as they were.
+    const licenses = io.list(`${source}/${FONTS}`).filter((file) => /^LICENSE/i.test(file));
+    for (const file of [...files, ...licenses]) io.copy(`${source}/${FONTS}/${file}`, `${config.fontDir}/${file}`);
+    for (const file of io.list(config.fontDir)) {
+      if (file.endsWith('.woff2') && !files.includes(file)) io.remove(`${config.fontDir}/${file}`);
+    }
+  } catch (error) {
+    io.log(`cannot copy the fonts: ${error.message}`);
+    return 1;
   }
+  io.write(config.output, text);
   io.write(STATE_FILE, `${JSON.stringify({ version, source: sourceHash, output: io.hash(text) }, null, 2)}\n`);
   io.log(`${config.output} written from Mber Flow ${version}`);
   return 0;
@@ -200,11 +267,13 @@ export function runTokens(args, io) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const at = (path) => resolve(root, path);
+  const sha256 = (data) => createHash('sha256').update(data).digest('hex');
   process.exitCode = runTokens(process.argv.slice(2), {
     env: process.env,
     resolve: (dir) => resolve(root, dir).replace(/\\/g, '/'),
     read: (path) => (existsSync(at(path)) ? readFileSync(at(path), 'utf8') : null),
-    exists: (path) => existsSync(at(path)),
+    fileHash: (path) => (existsSync(at(path)) ? sha256(readFileSync(at(path))) : null),
+    list: (dir) => (existsSync(at(dir)) ? readdirSync(at(dir)) : []),
     write: (path, text) => {
       mkdirSync(dirname(at(path)), { recursive: true });
       writeFileSync(at(path), text, 'utf8');
@@ -213,7 +282,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       mkdirSync(dirname(at(to)), { recursive: true });
       copyFileSync(at(from), at(to));
     },
-    hash: (text) => createHash('sha256').update(text).digest('hex'),
+    remove: (path) => rmSync(at(path)),
+    hash: sha256,
     log: (line) => console.log(`[tokens] ${line}`),
   });
 }

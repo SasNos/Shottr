@@ -11,12 +11,14 @@ import {
   render,
   resolveValue,
   runTokens,
+  splitTopLevel,
   topLevelBlocks,
 } from '../tools/tokens.mjs';
 
 const THEME = `/* palette */
+@import './reset.css';
 @font-face { font-family: 'Figtree'; src: url('./fonts/figtree.woff2') format('woff2'); }
-@font-face { font-family: 'Open Sans'; src: url("./fonts/open-sans.woff2") format('woff2'); }
+@font-face { font-family: 'Open Sans'; src: url("fonts/open-sans.woff2") format('woff2'); }
 :root { --color-1: #272c34; --color-2: #f0a35e; }
 :root[data-theme="light"] { --color-1: #eeebea; --color-2: #7a6254; }
 :root {
@@ -25,7 +27,7 @@ const THEME = `/* palette */
   --accent: var(--color-2);
   --font-2: 'Open Sans', system-ui;
   --font: var(--font-2);
-  --shade: var(--missing, #000);
+  --shade: var(--missing, rgba(0, 0, 0, 0.5));
 }
 :root[data-theme='dark'] { --ink: #eae2df; }
 :root[data-density='compact'] { --space-3: 6px; }
@@ -42,6 +44,7 @@ const CONFIG = {
   fontUrl: '../fonts/',
   tokens: ['--space-3', '--ink', '--accent', '--font'],
 };
+const FLOW_FONTS = 'flow/app/src/fonts';
 
 /** An in-memory disk. Mber Flow lives in `flow` unless `flow: null`. */
 function fakeIo({ files = {}, env = {}, flow = 'flow' } = {}) {
@@ -49,23 +52,31 @@ function fakeIo({ files = {}, env = {}, flow = 'flow' } = {}) {
   if (flow) {
     disk[`${flow}/app/src/theme.css`] = THEME;
     disk[`${flow}/app/package.json`] = JSON.stringify({ version: '1.19.0' });
+    disk[`${flow}/app/src/fonts/figtree.woff2`] = 'F1';
+    disk[`${flow}/app/src/fonts/open-sans.woff2`] = 'O1';
+    disk[`${flow}/app/src/fonts/LICENSE-Figtree.txt`] = 'OFL';
   }
   const logs = [];
-  const copies = [];
   return {
     disk,
     logs,
-    copies,
     env,
     resolve: (dir) => (dir === DEFAULT_SOURCE_DIRS[0] ? 'flow' : dir),
     read: (path) => disk[path] ?? null,
-    exists: (path) => path in disk,
+    fileHash: (path) => (path in disk ? `#${disk[path]}` : null),
+    list: (dir) =>
+      Object.keys(disk)
+        .filter((path) => path.startsWith(`${dir}/`))
+        .map((path) => path.slice(dir.length + 1)),
     write: (path, text) => {
       disk[path] = text;
     },
     copy: (from, to) => {
-      copies.push([from, to]);
-      disk[to] = `copy of ${from}`;
+      if (!(from in disk)) throw new Error(`no ${from}`);
+      disk[to] = disk[from];
+    },
+    remove: (path) => {
+      delete disk[path];
     },
     hash: (text) => `h${text.length}`,
     log: (line) => logs.push(line),
@@ -73,16 +84,24 @@ function fakeIo({ files = {}, env = {}, flow = 'flow' } = {}) {
 }
 
 describe('reading the theme', () => {
-  test('splits top level blocks and keeps nested ones in their body', () => {
-    const blocks = topLevelBlocks('a { b: 1 } @media x { c { d: 2 } } }');
+  test('splits at a separator outside quotes and parentheses', () => {
+    expect(splitTopLevel('a; url("x;y"); b(c;d); \'e;f\'', ';')).toEqual(['a', ' url("x;y")', ' b(c;d)', " 'e;f'"]);
+  });
+
+  test('splits top level blocks, keeps nested ones in their body and skips statements', () => {
+    const blocks = topLevelBlocks('@layer base; a { b: 1 } @media x { c { d: 2 } } }');
     expect(blocks).toEqual([
       { prelude: 'a', body: ' b: 1 ' },
       { prelude: '@media x', body: ' c { d: 2 } ' },
     ]);
   });
 
-  test('reads custom properties only', () => {
-    expect(declarations(' --a: 1px ; color: red; --b :\n  x   y ;')).toEqual({ '--a': '1px', '--b': 'x y' });
+  test('reads custom properties only, semicolons inside values included', () => {
+    expect(declarations(' --a: 1px ; color: red; --b :\n  x   y ; --c: url("data:a;b")')).toEqual({
+      '--a': '1px',
+      '--b': 'x y',
+      '--c': 'url("data:a;b")',
+    });
   });
 
   test('takes the plain, light and dark roots and the font faces, nothing else', () => {
@@ -96,14 +115,17 @@ describe('reading the theme', () => {
 });
 
 describe('resolving values', () => {
-  test('follows nested references and fallbacks', () => {
-    const map = { '--a': 'var(--b)', '--b': '1px' };
-    expect(resolveValue('0 var(--a) var(--c, 2px)', map)).toBe('0 1px 2px');
+  test('follows nested references and fallbacks, also fallbacks with parentheses', () => {
+    const map = { '--a': 'var(--b)', '--b': '1px', '--c': 'red' };
+    expect(resolveValue('0 var(--a) var(--x, 2px)', map)).toBe('0 1px 2px');
+    expect(resolveValue('var(--x, rgba(0, 0, 0, 0.1))', map)).toBe('rgba(0, 0, 0, 0.1)');
+    expect(resolveValue('var(--x, var(--c))', map)).toBe('red');
   });
 
-  test('rejects unknown tokens and endless references', () => {
+  test('rejects unknown tokens, endless references and broken var()', () => {
     expect(() => resolveValue('var(--nope)', {})).toThrow('unknown token --nope');
     expect(() => resolveValue('var(--a)', { '--a': 'var(--a)' })).toThrow('too deep');
+    expect(() => resolveValue('var(--a', {})).toThrow('unbalanced var()');
   });
 
   test('picks light and dark values of the listed tokens', () => {
@@ -111,7 +133,7 @@ describe('resolving values', () => {
     expect(tokens).toEqual([
       { name: '--ink', light: '#eeebea', dark: '#eae2df' },
       { name: '--accent', light: '#7a6254', dark: '#f0a35e' },
-      { name: '--shade', light: '#000', dark: '#000' },
+      { name: '--shade', light: 'rgba(0, 0, 0, 0.5)', dark: 'rgba(0, 0, 0, 0.5)' },
     ]);
   });
 
@@ -121,11 +143,12 @@ describe('resolving values', () => {
     );
   });
 
-  test('lists each font file once', () => {
-    expect(fontFiles(["src: url('./fonts/a.woff2')", 'src: url(./fonts/b.woff2), url("./fonts/a.woff2")'])).toEqual([
+  test('lists each font file once and rejects fonts from elsewhere', () => {
+    expect(fontFiles(["src: url('./fonts/a.woff2')", 'src: url(fonts/b.woff2), url("./fonts/a.woff2")'])).toEqual([
       'a.woff2',
       'b.woff2',
     ]);
+    expect(() => fontFiles(["src: url('/static/a.woff2')"])).toThrow("font outside Mber Flow's fonts folder");
   });
 });
 
@@ -133,8 +156,8 @@ describe('rendering', () => {
   const theme = parseTheme(THEME);
 
   test('writes light tokens, dark differences and fonts at the configured place', () => {
-    const css = render({ config: CONFIG, theme, sourceHash: 'abcdef0123456789' });
-    expect(css).toContain('Mber Flow app/src/theme.css (sha256 abcdef012345)');
+    const css = render({ config: CONFIG, theme });
+    expect(css).toMatch(/^\/\* Generated from Mber Flow's app\/src\/theme.css\. Do not edit/);
     expect(css).toContain("url('../fonts/figtree.woff2')");
     expect(css).toContain("url('../fonts/open-sans.woff2')");
     expect(css).toContain(
@@ -147,7 +170,7 @@ describe('rendering', () => {
 
   test('can prefix the names and use the system setting for dark, leaving the color scheme of the page alone', () => {
     const config = { ...CONFIG, prefix: 'hr-', dark: 'media', tokens: ['--ink'] };
-    const css = render({ config, theme, sourceHash: 'x' });
+    const css = render({ config, theme });
     expect(css).toContain(':root {\n  --hr-ink: #eeebea;\n}');
     expect(css).toContain('@media (prefers-color-scheme: dark) {\n  :root {\n    --hr-ink: #eae2df;\n  }\n}\n');
   });
@@ -155,7 +178,16 @@ describe('rendering', () => {
   test('has no prefix when none is configured', () => {
     const { prefix, ...config } = CONFIG;
     expect(prefix).toBe('');
-    expect(render({ config, theme, sourceHash: 'x' })).toContain('\n  --ink: #eeebea;\n');
+    expect(render({ config, theme })).toContain('\n  --ink: #eeebea;\n');
+  });
+
+  test('does not change when only comments or line endings of Mber Flow change', () => {
+    const io = fakeIo();
+    runTokens([], io);
+    const first = io.disk['src/theme.css'];
+    io.disk['flow/app/src/theme.css'] = `/* new comment */\r\n${THEME.replace(/\n/g, '\r\n')}`;
+    expect(runTokens(['--check'], io)).toBe(0);
+    expect(io.disk['src/theme.css']).toBe(first);
   });
 });
 
@@ -182,17 +214,16 @@ describe('running', () => {
     expect(io.logs).toEqual(['tokens.config.json is missing']);
   });
 
-  test('writes the tokens, copies the fonts and records the hashes', () => {
-    const io = fakeIo();
+  test('writes the tokens, copies fonts and licenses, drops old fonts and records the hashes', () => {
+    const io = fakeIo({ files: { 'fonts/old.woff2': 'X', 'fonts/README.txt': 'keep' } });
     expect(runTokens([], io)).toBe(0);
     const css = io.disk['src/theme.css'];
     expect(css).toContain('--accent: #7a6254;');
-    expect(io.copies).toEqual([
-      ['flow/app/src/fonts/figtree.woff2', 'fonts/figtree.woff2'],
-      ['flow/app/src/fonts/open-sans.woff2', 'fonts/open-sans.woff2'],
-      ['flow/app/src/fonts/LICENSE-Figtree.txt', 'fonts/LICENSE-Figtree.txt'],
-      ['flow/app/src/fonts/LICENSE-OpenSans.txt', 'fonts/LICENSE-OpenSans.txt'],
-    ]);
+    expect(io.disk['fonts/figtree.woff2']).toBe('F1');
+    expect(io.disk['fonts/open-sans.woff2']).toBe('O1');
+    expect(io.disk['fonts/LICENSE-Figtree.txt']).toBe('OFL');
+    expect(io.disk['fonts/old.woff2']).toBeUndefined();
+    expect(io.disk['fonts/README.txt']).toBe('keep');
     expect(JSON.parse(io.disk['tokens.source.json'])).toEqual({
       version: '1.19.0',
       source: `h${THEME.length}`,
@@ -208,6 +239,15 @@ describe('running', () => {
     expect(io.logs).toContain('STYLE GUIDE DRIFT: Mber Flow 1.16.3 -> 1.19.0');
   });
 
+  test('changes nothing when a font cannot be copied', () => {
+    const io = fakeIo();
+    delete io.disk[`${FLOW_FONTS}/open-sans.woff2`];
+    expect(runTokens([], io)).toBe(1);
+    expect(io.logs.at(-1)).toBe(`cannot copy the fonts: no ${FLOW_FONTS}/open-sans.woff2`);
+    expect(io.disk['src/theme.css']).toBeUndefined();
+    expect(io.disk['tokens.source.json']).toBeUndefined();
+  });
+
   test('passes the check when the file and the fonts are current', () => {
     const io = fakeIo();
     runTokens([], io);
@@ -216,16 +256,21 @@ describe('running', () => {
     expect(io.logs).toEqual([]);
   });
 
-  test('fails the check on a stale file or a missing font', () => {
+  test('fails the check on a stale file, a missing, changed or extra font', () => {
     const io = fakeIo();
     runTokens([], io);
     io.disk['src/theme.css'] += '/* edited */';
-    expect(runTokens(['--check'], io)).toBe(1);
-    expect(io.logs.at(-1)).toMatch(/^STYLE GUIDE DRIFT: src\/theme.css does not match Mber Flow 1.19.0/);
-
-    runTokens([], io);
+    io.disk['fonts/figtree.woff2'] = 'F0';
     delete io.disk['fonts/open-sans.woff2'];
+    io.disk['fonts/old.woff2'] = 'X';
+    io.logs.length = 0;
     expect(runTokens(['--check'], io)).toBe(1);
+    expect(io.logs).toEqual([
+      'STYLE GUIDE DRIFT: src/theme.css does not match Mber Flow 1.19.0; run `npm run tokens`',
+      'STYLE GUIDE DRIFT: fonts/figtree.woff2 is missing or differs from Mber Flow; run `npm run tokens`',
+      'STYLE GUIDE DRIFT: fonts/open-sans.woff2 is missing or differs from Mber Flow; run `npm run tokens`',
+      'STYLE GUIDE DRIFT: fonts/old.woff2 is no longer in Mber Flow; run `npm run tokens`',
+    ]);
   });
 
   test('fails when a listed token is gone from Mber Flow', () => {
@@ -235,7 +280,7 @@ describe('running', () => {
     expect(io.logs).toEqual(['cannot generate src/theme.css: not in Mber Flow: --gone']);
   });
 
-  test('says "unknown" when Mber Flow has no package.json', () => {
+  test('records "unknown" when Mber Flow has no package.json', () => {
     const io = fakeIo();
     delete io.disk['flow/app/package.json'];
     runTokens([], io);

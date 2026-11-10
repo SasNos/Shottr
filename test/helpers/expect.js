@@ -7,6 +7,7 @@ export function expect(actual) {
     toBe: (expected) => assert.equal(actual, expected),
     toEqual: (expected) => assert.deepEqual(actual, expected),
     toBeNull: () => assert.equal(actual, null),
+    toBeUndefined: () => assert.equal(actual, undefined),
     toHaveLength: (length) => assert.equal(actual.length, length),
     toMatch: (pattern) => assert.match(actual, pattern),
     toContain: (part) =>
