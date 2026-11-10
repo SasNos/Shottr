@@ -3,3 +3,4 @@ coverage/
 *.log
 *.zip
 graphify-out/
+dist/
