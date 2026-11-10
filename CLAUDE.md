@@ -68,7 +68,7 @@ Spark runs the npm commands in `app/` and adds `cargo test`; it has no ESLint an
 ### Git
 
 - One logical change per commit, named paths only (never `git add -A` or `git add .`), message in English, ending with the Co-Authored-By line of the model in use.
-- Push only when the user asks, at most once per day and repository, and only to a private remote. GroupRepos may be pushed (user, 2026-11-10); the other public remotes (Shottr, Honest Ratings) only on an explicit request for that repository. Anime Link Finder has no remote. No `v*` tags, nothing that builds for macOS.
+- Push only when the user asks, at most once per day and repository, and only to a private remote. The public remotes (GroupRepos, Shottr, Honest Ratings) may be pushed too (user, 2026-11-10). Spark is not pushed without the user's explicit go, because every push runs CI with a macOS job. Anime Link Finder has no remote. No `v*` tags, nothing that builds for macOS.
 
 ### Finishing a task
 
