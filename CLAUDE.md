@@ -43,7 +43,7 @@ Spark runs the npm commands in `app/` and adds `cargo test`; it has no ESLint an
 
 ### Style guide
 
-- **Source:** Mber Flow, `D:\Dateien - Work\Eigene\Tools\Mber Web\Mber Flow` (`app/src/theme.css`, `app/src/fonts`, `docs/STYLEGUIDE.md`). It is the only source of the look of Spark, Shottr, Site Restyler and Honest Ratings. GroupRepos follows GitHub's own look (user, 2026-10-19). Anime Link Finder: open, ask the user before restyling it.
+- **Source:** Mber Flow, `D:\Dateien - Work\Eigene\Tools\Mber Web\Mber Flow` (`app/src/theme.css`, `app/src/fonts`, `docs/STYLEGUIDE.md`). It is the only source of the look of Spark, Shottr, Site Restyler and Honest Ratings. GroupRepos follows GitHub's own look (user, 2026-10-19). Anime Link Finder keeps its own look (user, 2026-11-10).
 - **Never copy tokens by hand.** `npm run tokens` generates the token file and records the hashes in `tokens.source.json`. In the tools the generator is `tools/tokens.mjs` (identical in Shottr, Site Restyler and Honest Ratings; a change is copied to all three): it takes the token list from `tokens.config.json` and copies Figtree and Open Sans into `fonts/`. Spark has `app/scripts/tokens.ts` (logic in `app/src/tokenSync.ts`) and bundles the same fonts from npm (`@fontsource-variable`, `app/src/fonts.css`). Never edit a generated file. A missing token: add its name to `tokens.config.json`, run `npm run tokens`. `MBER_FLOW_DIR` overrides where Mber Flow is looked up.
 - **STYLE GUIDE DRIFT** in the output of `npm run tokens` means Mber Flow changed: regenerate, check the UI in light and dark, mention it in the report.
 - **Fonts:** headings (`h1`–`h3`, titles) `var(--font-1)` = Figtree, everything else `var(--font)` = Open Sans. Self-hosted only, no font CDN. UI injected into a web page may keep the system font where loading the fonts would need extra permissions; a comment says so.
@@ -68,7 +68,7 @@ Spark runs the npm commands in `app/` and adds `cargo test`; it has no ESLint an
 ### Git
 
 - One logical change per commit, named paths only (never `git add -A` or `git add .`), message in English, ending with the Co-Authored-By line of the model in use.
-- Push only when the user asks, at most once per day and repository, and only to a private remote. Public remotes (GroupRepos, Shottr, Honest Ratings) are never pushed by Claude; Anime Link Finder has no remote. No `v*` tags, nothing that builds for macOS.
+- Push only when the user asks, at most once per day and repository, and only to a private remote. GroupRepos may be pushed (user, 2026-11-10); the other public remotes (Shottr, Honest Ratings) only on an explicit request for that repository. Anime Link Finder has no remote. No `v*` tags, nothing that builds for macOS.
 
 ### Finishing a task
 
