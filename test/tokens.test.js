@@ -192,6 +192,15 @@ describe('rendering', () => {
 });
 
 describe('finding Mber Flow', () => {
+  test('falls back to the default place when MBER_FLOW_DIR points nowhere', () => {
+    expect(findSource(fakeIo({ env: { MBER_FLOW_DIR: 'nowhere' } }))).toBe('flow');
+  });
+
+  test('rejects font file names that would leave the fonts folder', () => {
+    expect(() => fontFiles(["src: url('./fonts/../x.woff2')"])).toThrow('unsafe font file name');
+    expect(() => fontFiles(["src: url('./fonts/a/b.woff2')"])).toThrow('unsafe font file name');
+  });
+
   test('uses MBER_FLOW_DIR first', () => {
     const io = fakeIo({ flow: 'elsewhere', env: { MBER_FLOW_DIR: 'elsewhere' } });
     expect(findSource(io)).toBe('elsewhere');

@@ -14,6 +14,8 @@
 - Tested: `npm run check` (201 tests, 100 % line, branch and function coverage). Not tested: the popup, the editor and
   the selection bar with the new colors and fonts in Chrome.
 
+- The coverage exclusion in `tools/tokens.mjs` (the disk binding at the end: real files, real hash, runs only as a script) is marked with ignore comments; everything else in the file is tested.
+
 ## Open work
 
 1. Look at the popup, the editor and the selection bar in Chrome, light and dark, after the new palette.

@@ -148,6 +148,8 @@ export function fontFiles(fontFaces) {
     if (other) throw new Error(`font outside Mber Flow's fonts folder: ${other[0]}`);
   }
   const files = fontFaces.flatMap((rule) => [...rule.matchAll(FONT_URL)].map((m) => m[2]));
+  const unsafe = files.find((file) => /\.\.|[\\/]/.test(file));
+  if (unsafe) throw new Error(`unsafe font file name: ${unsafe}`);
   return [...new Set(files)];
 }
 
@@ -180,7 +182,7 @@ export function render({ config, theme }) {
 
 /** The first Mber Flow folder that has a theme.css: MBER_FLOW_DIR first, then the default places. */
 export function findSource(io) {
-  const dirs = io.env.MBER_FLOW_DIR ? [io.env.MBER_FLOW_DIR] : DEFAULT_SOURCE_DIRS;
+  const dirs = [io.env.MBER_FLOW_DIR, ...DEFAULT_SOURCE_DIRS].filter(Boolean);
   return dirs.map((dir) => io.resolve(dir)).find((dir) => io.read(`${dir}/${THEME}`) !== null) ?? null;
 }
 
