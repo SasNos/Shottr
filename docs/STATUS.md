@@ -1,5 +1,10 @@
 # Status
 
+## 14 November 2026: more distinct toolbar icon (1.0.7)
+
+- The old icon (white viewfinder corners on a blue square) disappeared in the toolbar next to other blue icons. The new one is an orange rounded square (Mber Flow's warm accent family) with heavier corner marks and a center dot, drawn larger and anti-aliased. `tools/make-icons.mjs` generates `icons/icon16.png`, `icon48.png` and `icon128.png`.
+- Tested: `npm run check`; the three sizes were rendered on a light and a dark background and checked by eye. Not tested: the icon in Chrome's real toolbar (reload the extension in `chrome://extensions`).
+
 ## 11 November 2026: clean-up
 
 - Reviewed all tests: none duplicate, none empty. Deleted the ignored zips `shottr-1.0.0.zip` and `shottr-1.0.4.zip` (old builds, nothing references them).
